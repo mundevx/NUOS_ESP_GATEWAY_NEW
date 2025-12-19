@@ -1,0 +1,51 @@
+dependencies:
+  espressif/esp-serial-flasher:
+    component_hash: dcc42a16712a1a636509cf0bf90e14032d7f2141784b533613b267b6aa318d52
+    dependencies: []
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 0.0.11
+  espressif/esp-zboss-lib:
+    component_hash: 321883d142421f65009972408287441794250057668a11abbdfd8bec77c3309a
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=5.0'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 1.6.4
+  espressif/esp-zigbee-lib:
+    component_hash: 947ea40aa95a89b9da238e941bd2950952e7cd422074d0c02d6896e2ff07bad5
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=5.0'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 1.6.5
+  espressif/esp_rcp_update:
+    component_hash: 5bd5e45c7bddcbef55b7180819b056ba69a92e16ae705548f61dc0402b6d7ec7
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=5.0'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 0.3.1
+  idf:
+    source:
+      type: idf
+    version: 5.5.0
+direct_dependencies:
+- espressif/esp-serial-flasher
+- espressif/esp-zboss-lib
+- espressif/esp-zigbee-lib
+- espressif/esp_rcp_update
+- idf
+manifest_hash: 8b071517a237c1dedad51282a398a11a17d78c32d4ffae681afc384a4a82bc50
+target: esp32h2
+version: 2.0.0
