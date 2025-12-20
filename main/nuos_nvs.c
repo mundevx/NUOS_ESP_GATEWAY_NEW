@@ -375,6 +375,236 @@ bool find_group_and_scene(uint16_t short_addr, uint16_t did, uint16_t *group_id,
     return false; // Not found
 }
 
+
+// Assuming you have functions like these for NVS
+void save_devices_to_nvs() {
+    nvs_handle_t nvs_handle;
+    esp_err_t err = nvs_open("zigbee_storage", NVS_READWRITE, &nvs_handle);
+    if (err == ESP_OK) {
+        // Save device count
+        nvs_set_u16(nvs_handle, "dev_count", devices_count);
+        
+        // Save device array
+        nvs_set_blob(nvs_handle, "device_array", device_array, devices_count * sizeof(node_module_t));
+        
+        nvs_commit(nvs_handle);
+        nvs_close(nvs_handle);
+        ESP_LOGI(TAG, "Saved %d devices to NVS", devices_count);
+    }
+}
+
+
+bool is_ieee_invalid(const esp_zb_ieee_addr_t _ieee_addr) {
+    uint64_t all_ff[8] = {0,0,0,0,0,0,0,0};
+
+    for (int i = 0; i < 8; i++) {
+        printf("ieee_addr[%d]=0x%02x\n", i, _ieee_addr[i]);
+        if (_ieee_addr[i] == 0xFF) {
+           all_ff[i] = 0xff; 
+        }
+    }
+    if(all_ff[0] == 0xff && all_ff[1] == 0xff && all_ff[2] == 0xff && all_ff[3] == 0xff &&
+       all_ff[4] == 0xff && all_ff[5] == 0xff && all_ff[6] == 0xff && all_ff[7] == 0xff) {
+        return true;
+    }
+    return false;
+}
+
+
+uint8_t remove_invalid_ieee_devices() {
+    // 3. Remove invalid devices
+    printf("\nRemoving invalid devices...%d\n", devices_count);
+    uint8_t removed = 0;
+    for (uint16_t i = 0; i < devices_count; ) {
+        if (is_ieee_invalid(device_array[i].ieee_addr)) {
+            printf("  Removing index %d: Module ID %d\n", i, device_array[i].module_id);
+            
+            // Shift devices
+            for (uint16_t j = i; j < devices_count - 1; j++) {
+                memcpy(&device_array[j], &device_array[j + 1], sizeof(node_module_t));
+            }
+            devices_count--;
+            removed++;
+        } else {
+            i++;
+        }
+    }
+    if (removed > 0) {
+        printf("Removed %d device(s) with invalid IEEE address. Device count: %d\n",
+               removed, devices_count);
+               save_devices_to_nvs();
+    }
+    
+    return removed;
+}
+
+uint8_t remove_invalid_ieee_devices1234() {
+    uint8_t removed_count = 0;
+    uint16_t original_count = devices_count;
+    
+    for (uint16_t i = 0; i < devices_count; ) {
+        if (is_ieee_invalid(device_array[i].ieee_addr)) {
+            printf("Removing device with invalid IEEE address at index %d (Module ID %d, Short Addr 0x%04X)\n",
+                   i, device_array[i].module_id, device_array[i].short_addr);
+            
+            // Shift all devices after i one position left
+            for (uint16_t j = i; j < devices_count - 1; j++) {
+                memcpy(&device_array[j], &device_array[j + 1], sizeof(node_module_t));
+            }
+            
+            devices_count--;
+            removed_count++;
+
+            remove_zigbee_device_from_nvs(device_array[i].short_addr);
+            // Don't increment i because we shifted the next device to position i
+        } else {
+            i++;  // Only increment if we didn't remove
+        }
+    }
+    
+    if (removed_count > 0) {
+        printf("Removed %d device(s) with invalid IEEE address. Device count: %d -> %d\n",
+               removed_count, original_count, devices_count);
+    }
+    
+    return removed_count;
+}
+
+int16_t find_module_index_by_ieee(const esp_zb_ieee_addr_t ieee_addr) {
+    for (uint16_t i = 0; i < devices_count; i++) {
+        // Compare each byte of the IEEE address
+        if (memcmp(device_array[i].ieee_addr, ieee_addr, sizeof(esp_zb_ieee_addr_t)) == 0) {
+            return i;  // Found at index i
+        }
+    }
+    return -1;  // Not found
+}
+
+// Find device by IEEE address
+int16_t find_module_by_ieee(esp_zb_ieee_addr_t ieee_addr) {
+    for (uint16_t i = 0; i < devices_count; i++) {
+        if (memcmp(device_array[i].ieee_addr, ieee_addr, sizeof(esp_zb_ieee_addr_t)) == 0) {
+            return i;  // Found
+        }
+    }
+    return -1;  // Not found
+}
+
+// // Find device by short address
+// int16_t find_device_by_short_addr(uint16_t short_addr) {
+//     for (uint16_t i = 0; i < devices_count; i++) {
+//         if (device_array[i].short_addr == short_addr) {
+//             return i;  // Found
+//         }
+//     }
+//     return -1;  // Not found
+// }
+
+// Find endpoint by short address and endpoint ID
+int16_t find_endpoint_in_device(uint16_t short_addr, uint8_t endpoint_id) {
+    for (uint16_t i = 0; i < devices_count; i++) {
+        if (device_array[i].short_addr == short_addr) {
+            for (uint8_t ep_idx = 0; ep_idx < device_array[i].ep_counts; ep_idx++) {
+                if (device_array[i].endpoint[ep_idx].ep == endpoint_id) {
+                    return ep_idx;
+                }
+            }
+        }
+    }
+    return -1;
+}
+
+uint8_t remove_duplicate_devices() {
+    uint8_t removed_count = 0;
+    uint16_t original_count = devices_count;
+    
+    for (uint16_t i = 0; i < devices_count; i++) {
+        // For each device, check if same IEEE exists later
+        for (uint16_t j = i + 1; j < devices_count; ) {
+            if (memcmp(device_array[i].ieee_addr, device_array[j].ieee_addr, 
+                      sizeof(esp_zb_ieee_addr_t)) == 0) {
+                // Found duplicate at index j
+                printf("Removing duplicate at index %d (Module ID %d, Short Addr 0x%04X)\n",
+                       j, device_array[j].module_id, device_array[j].short_addr);
+                
+                // Shift all devices after j one position left
+                for (uint16_t k = j; k < devices_count - 1; k++) {
+                    memcpy(&device_array[k], &device_array[k + 1], sizeof(node_module_t));
+                }
+                
+                devices_count--;
+                removed_count++;
+
+                remove_zigbee_device_from_nvs(device_array[j].short_addr);
+                // Don't increment j because we shifted the next device to position j
+            } else {
+                j++;  // Only increment if we didn't remove
+            }
+        }
+    }
+    
+    if (removed_count > 0) {
+        printf("Removed %d duplicate device(s). Device count: %d -> %d\n",
+               removed_count, original_count, devices_count);
+    }
+    
+    return removed_count;
+}
+
+void print_devices_compact() {
+    printf("\nDevices in database: %d\n", devices_count);
+    printf("Idx | ModID | Room | ShortAddr | IEEE Address          | Active | EPs | Name | Device Type       |\n");
+    printf("----|-------|------|-----------|-----------------------|--------|-----|------|-------------      |\n");
+    
+    for (uint16_t i = 0; i < devices_count; i++) {
+        node_module_t *device = &device_array[i];
+        
+        // Format IEEE address
+        char ieee_str[24];
+        snprintf(ieee_str, sizeof(ieee_str), "%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X",
+                device->ieee_addr[0], device->ieee_addr[1], device->ieee_addr[2],
+                device->ieee_addr[3], device->ieee_addr[4], device->ieee_addr[5],
+                device->ieee_addr[6], device->ieee_addr[7]);
+        
+        printf("%3d | %5d | %4d |   0x%04X  | %s | %6s | %3d | %s",
+               i, device->module_id, device->room_id, device->short_addr,
+               ieee_str, device->is_active ? "Yes" : "No", 
+               device->ep_counts, device->loc_name);
+               /////////////////////////////////////////////////////////////
+               printf(" | ");
+               for(int j=0; j<device->ep_counts; j++){
+                   printf(" 0x%d", device->endpoint[j].dev_type);   
+               }
+        
+        printf("\n");
+
+    }
+    
+    printf("\n");
+}
+
+void print_endpoints_details() {
+    printf("\n=== Endpoint Details ===\n");
+    
+    for (uint16_t i = 0; i < devices_count; i++) {
+        node_module_t *device = &device_array[i];
+        
+        for (uint8_t ep_idx = 0; ep_idx < device->ep_counts; ep_idx++) {
+            endpoint_t *ep = &device->endpoint[ep_idx];
+            
+            printf("Device[%d].EP[%d]: ID=0x%04X, Type=0x%04X, Name='%s'\n",
+                   i, ep->ep, ep->dev_id, ep->dev_type, ep->dev_name);
+            
+            // For each cluster
+            for (uint8_t cl_idx = 0; cl_idx < ep->cluster_counts; cl_idx++) {
+                printf("  Cluster[%d]: 0x%04X %s\n", 
+                       cl_idx, ep->cluster_id[cl_idx],
+                       ep->is_bind[cl_idx] ? "(Bound)" : "");
+            }
+        }
+    }
+}
+
 esp_err_t nvs_store_or_update_scene(const device_scene_handle_t *new_scene)
 {
     esp_err_t err = ESP_OK;

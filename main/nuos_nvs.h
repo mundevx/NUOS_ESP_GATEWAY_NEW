@@ -33,6 +33,12 @@ bool find_group_and_scene(uint16_t short_addr, uint16_t did, uint16_t *group_id,
 esp_err_t nvs_get_last_ids(uint16_t *group_id, uint8_t *scene_id);
 esp_err_t nvs_set_last_ids(uint16_t group_id, uint8_t scene_id);
 
+void print_devices_compact();
+int16_t find_module_index_by_ieee(const esp_zb_ieee_addr_t ieee_addr);
+int16_t find_module_by_ieee(esp_zb_ieee_addr_t ieee_addr);
+uint8_t remove_duplicate_devices();
+uint8_t remove_invalid_ieee_devices();
+
 #ifdef __cplusplus
 }
 #endif

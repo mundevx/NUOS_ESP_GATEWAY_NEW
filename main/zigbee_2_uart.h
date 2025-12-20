@@ -12,6 +12,9 @@ extern "C" {
     extern int uart_put_all(uint8_t *byte, uint8_t len);
     extern int uart_send_bytes_to_gateway(uint8_t *byte, uint8_t len);
 
+    void start_timer_10s(esp_zb_ieee_addr_t ieee_addr);
+    void stop_timer_10s(void);
+
 #ifdef __cplusplus
     }
 #endif                      

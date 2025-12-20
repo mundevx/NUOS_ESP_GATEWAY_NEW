@@ -4,36 +4,18 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_system.h"
-#include "esp_log.h"
-#include "cJSON.h"
-#include "esp_zigbee_type.h"
-#include "nuos_nvs.h"
-#include "cJSON.h"
-#include "esp_zigbee_core.h"
 #include "driver/uart.h"
-#include "common.h"
-
 #include "esp_timer.h"
 #include "esp_log.h"
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include "mbedtls/base64.h"
-#include "mbedtls/aes.h"
-
-
-#include "XBee.h"
+#include "nuos_nvs.h"
+#include "common.h"
 #include "frame_enc_dec.h"
-
-
 
 // handle of the timer
 static esp_timer_handle_t periodic_timer;
 
 static const char *TAG                                          = "ESP_ZB_TO_UART";
-
-
 
 #define UART_PORT_NUM                                           UART_NUM_1
 #define UART_TX_PIN                                             5
@@ -42,8 +24,8 @@ static const char *TAG                                          = "ESP_ZB_TO_UAR
 #define UART_BUF_SIZE                                           (1024)
 
 
-void stop_timer_10s(void);
-void start_timer_10s(void);
+// void stop_timer_10s(void);
+// void start_timer_10s(esp_zb_ieee_addr_t ieee_addr);
 
 
 //void send_module_unconfigured_over_uart();
@@ -179,7 +161,14 @@ extern "C" int uart_send_bytes_to_gateway(uint8_t *byte, uint8_t len) {
  */
 static void timer_callback(void *arg)
 {
-    //send_module_unconfigured_over_uart();
+    esp_zb_ieee_addr_t *ieee_addrarg = (esp_zb_ieee_addr_t *)arg;
+    if (ieee_addrarg) {
+        ESP_LOGI(TAG, "Timer callback invoked for IEEE Address: %02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X",
+                 (*ieee_addrarg)[0], (*ieee_addrarg)[1], (*ieee_addrarg)[2], (*ieee_addrarg)[3],
+                 (*ieee_addrarg)[4], (*ieee_addrarg)[5], (*ieee_addrarg)[6], (*ieee_addrarg)[7]);
+        send_module_unconfigured_over_uart(*ieee_addrarg);
+    }
+    
     ESP_LOGI(TAG, "Timer fired!");
 }
 
@@ -187,15 +176,16 @@ static void timer_callback(void *arg)
  * @brief Start a periodic timer with 10 seconds interval
  */
 
-void start_timer_10s(void)
+extern "C" void start_timer_10s(esp_zb_ieee_addr_t ieee_addr)
 {
+    
     if (periodic_timer != NULL) {
         ESP_LOGW(TAG, "Timer already running!");
         return;
     }
     const esp_timer_create_args_t timer_args = {
         .callback = &timer_callback,
-        .arg = NULL,
+        .arg = &ieee_addr,
         .dispatch_method = ESP_TIMER_TASK,
         .name = "my_10s_timer"
     };
@@ -209,7 +199,7 @@ void start_timer_10s(void)
 /**
  * @brief Stop and delete the periodic timer
  */
-void stop_timer_10s(void)
+extern "C" void stop_timer_10s(void)
 {
     if (periodic_timer == NULL) {
         ESP_LOGW(TAG, "Timer not running!");

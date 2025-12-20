@@ -1,36 +1,26 @@
 
 
+#include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_system.h"
 #include "esp_log.h"
-#include "cJSON.h"
 #include "esp_zigbee_type.h"
-#include "nuos_nvs.h"
-#include "cJSON.h"
 #include "esp_zigbee_core.h"
 #include "driver/uart.h"
-#include "common.h"
-
-#include "esp_timer.h"
-#include "esp_log.h"
-
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
 #include "mbedtls/base64.h"
 #include "mbedtls/aes.h"
+#include "esp_log.h"
 
+#include "nuos_nvs.h"
+#include "common.h"
 #include "XBee.h"
 #include "zigbee_2_uart.h"
 #include "frame_enc_dec.h"
 
 
-// handle of the timer
-static esp_timer_handle_t periodic_timer;
-
-#define LIGHT_BULB_DEVICE_PARAMS_TAG 	                        "LIGHT_BULB_DEVICE_PARAMS"
 
 
 static const char *TAG                                          = "ESP_ZB_ENC_DEC";
@@ -67,64 +57,6 @@ extern void nuos_zb_leave_device(node_module_t * module_remove );
 #endif
 
 void send_xbee_data_over_uart(const char* mdata, uint16_t len, esp_zb_ieee_addr_t ieee_addr, int16_t V_XbeeMsmgNextFrameId);
-
-
-void decrypt_single_block(const char* base64_encrypted) {
-    const char* encrypted_data = "0o97i80zJiNQHtJls/gJoA==";
-    
-    printf("Encrypted string: %s\n", encrypted_data);
-    printf("Length: %zu\n", strlen(encrypted_data));
-    
-    // Base64 decode
-    unsigned char decoded[16];
-    size_t decoded_len;
-    
-    int ret = mbedtls_base64_decode(decoded, sizeof(decoded), &decoded_len,
-                                   (const unsigned char*)encrypted_data, 
-                                   strlen(encrypted_data));
-    
-    if (ret != 0) {
-        printf("Base64 decode failed: %d\n", ret);
-        return;
-    }
-    
-    printf("Decoded bytes (%zu): ", decoded_len);
-    for (size_t i = 0; i < decoded_len; i++) {
-        printf("%02x ", decoded[i]);
-    }
-    printf("\n");
-    
-    // AES decrypt
-    mbedtls_aes_context aes;
-    mbedtls_aes_init(&aes);
-    mbedtls_aes_setkey_dec(&aes, C_ENCRYPTION_KEY_2, 128);
-    
-    unsigned char decrypted[16];
-    mbedtls_aes_crypt_ecb(&aes, MBEDTLS_AES_DECRYPT, decoded, decrypted);
-    
-    mbedtls_aes_free(&aes);
-    
-    printf("Decrypted bytes: ");
-    for (int i = 0; i < 16; i++) {
-        printf("%02x ", decrypted[i]);
-    }
-    printf("\n");
-    
-    // Try to interpret as string
-    decrypted[15] = '\0'; // Null terminate
-    printf("As string: %s\n", (char*)decrypted);
-    
-    // Also print as characters
-    printf("As characters: ");
-    for (int i = 0; i < 16; i++) {
-        if (decrypted[i] >= 32 && decrypted[i] <= 126) {
-            printf("%c", decrypted[i]);
-        } else {
-            printf(".");
-        }
-    }
-    printf("\n");
-}
 
 
 /**
@@ -476,6 +408,25 @@ void free_encrypted_data(char* data) {
 
 /////////////////////////////////////////////////////////////////////////////////
 
+void convert_xbee_to_zigbee_addr(const XBeeAddress64 &xbee_addr , esp_zb_ieee_addr_t zigbee_addr) {
+    XBeeAddress64& non_const_xbee = const_cast<XBeeAddress64&>(xbee_addr);
+    uint32_t msb = non_const_xbee.getMsb();
+    uint32_t lsb = non_const_xbee.getLsb();
+    
+    // Create temporary 32-bit variables in network byte order
+    uint32_t msb_be = __builtin_bswap32(msb);  // Convert to big-endian if needed
+    uint32_t lsb_be = __builtin_bswap32(lsb);
+    
+    // Copy to output array
+    memcpy(&zigbee_addr[4], &msb_be, 4);
+    memcpy(&zigbee_addr[0], &lsb_be, 4);
+    
+    // printf("Converted XBee to Zigbee (memcpy): ");
+    // for (int i = 0; i < 8; i++) {
+    //     printf("%02x", zigbee_addr[i]);
+    // }
+    // printf("\n");
+}
 
 
 // Helper function to convert esp_zb_ieee_addr_t to XBeeAddress64
@@ -520,31 +471,27 @@ static void build_ctrl_string(node_module_t *node, int start_idx, int idx, char 
 
 extern "C" void send_module_unconfigured_over_uart(esp_zb_ieee_addr_t ieee_addr) {
     const char* unconfigured_str = "cntr/255*255@0,-255!";
-    printf(unconfigured_str);
+    // printf(unconfigured_str);
     send_xbee_data_over_uart(unconfigured_str, strlen(unconfigured_str), ieee_addr, -1);
+    start_timer_10s(ieee_addr);
 }
 
 extern "C" void send_module_remove_device_on_uart(uint8_t room_id, uint8_t module_id, esp_zb_ieee_addr_t ieee_addr) {
     //addc/2*1@0,[255,255,-255,-255,-255,-255]!
     char del_str[50];
     snprintf(del_str, sizeof(del_str), "delc/%d*%d@0,-255!", room_id, module_id);
-    printf(del_str);
+    //printf(del_str);
     send_xbee_data_over_uart(del_str, strlen(del_str), ieee_addr, -1);
 }
 
-//const char* send_device_str = "addc/1*1@0,[1,2,3,4,-255,-255]!";
 
 extern "C" void send_module_ctrl_over_uart(node_module_t *node, int start_idx, int idx)
 {
     char tx_buf[128];  // enough for your format
     build_ctrl_string(node, start_idx, idx, tx_buf, sizeof(tx_buf));
-
-    printf("==========>UART TX: %s  len:%d\n", tx_buf, strlen(tx_buf));
-
+    // printf("==========>UART TX: %s  len:%d\n", tx_buf, strlen(tx_buf));
     send_xbee_data_over_uart(tx_buf, strlen(tx_buf), node->ieee_addr, -1);
 }
-
-
 
 void send_xbee_data_over_uart(const char* mdata, uint16_t len, esp_zb_ieee_addr_t ieee_addr, int16_t V_XbeeMsmgNextFrameId)
 {
@@ -569,8 +516,8 @@ void send_xbee_data_over_uart(const char* mdata, uint16_t len, esp_zb_ieee_addr_
         
         // Get XBee address
         convert_zigbee_to_xbee_addr(ieee_addr, &V_ROUTER_ADDR_L_HEX, &V_ROUTER_ADDR_H_HEX);
-        printf("V_ROUTER_ADDR_H_HEX: %06lx", V_ROUTER_ADDR_H_HEX);
-        printf("  V_ROUTER_ADDR_L_HEX: %08lx\n", V_ROUTER_ADDR_L_HEX);
+        printf("ZB_DEVICE_ADDR_H_HEX: %08lx", V_ROUTER_ADDR_H_HEX);
+        printf("  ZB_DEVICE_ADDR_L_HEX: %08lx\n", V_ROUTER_ADDR_L_HEX);
         
         if(V_ROUTER_ADDR_H_HEX != 0 && V_ROUTER_ADDR_L_HEX != 0) {
             XBeeAddress64 addr64 = XBeeAddress64(V_ROUTER_ADDR_H_HEX, V_ROUTER_ADDR_L_HEX);
@@ -579,14 +526,11 @@ void send_xbee_data_over_uart(const char* mdata, uint16_t len, esp_zb_ieee_addr_
                 V_XbeeMsmgNextFrameId = xbee.getNextFrameId();
             }
             zbTx.setFrameId((uint8_t)V_XbeeMsmgNextFrameId);
-
             xbee.send(zbTx);
-            
             printf("Sending %d bytes to XBee\n", encrypted_len);
         } else {
-            printf("Router address is 0 or room/module id out of range\n");
+            printf("Zb device address is 0 or room/module id out of range\n");
         }
-        
         // Free the encrypted string
         free(V_SEND_ENCRYPTED_DATA_TO_MODULE_STR);
     }
@@ -680,32 +624,71 @@ void process_uart_data(const char* data, uint16_t len, esp_zb_ieee_addr_t ieee_a
     CtrlCommand cmd = parseCtrlMsg(data);
     
     // // Debug output
-    printf("Cmd:  %s ", cmd.command);
-    printf(" Room: %d", cmd.roomId);
-    printf(" Mod: %d", cmd.moduleId);
-    printf(" Dev:%d\n", cmd.deviceId);
+    // printf("Cmd:  %s ", cmd.command);
+    // printf(" Room: %d", cmd.roomId);
+    // printf(" Mod: %d", cmd.moduleId);
+    // printf(" Dev:%d\n", cmd.deviceId);
     //stat/1*1@0,-255!
     // Forward parsed data 
-    if(cmd.command[0] == 'a' && cmd.command[1] == 'd' && cmd.command[2] == 'd' && cmd.command[3] == 'd'){
+
+    //edtd/1*3@2,1!
+    if(cmd.command[0] == 'e' && cmd.command[1] == 'd' && cmd.command[2] == 't' && cmd.command[3] == 'd'){
+
+        uart_send_bytes_to_gateway(original_frame, original_frame_length);
+        for(int i=0; i<devices_count; i++){
+            if(device_array[i].room_id == cmd.roomId && device_array[i].module_id == cmd.moduleId){
+                //ESP_LOGI(TAG, "Addresses are equal");
+                for(int j=0; j<device_array[i].ep_counts; j++){
+                    if(device_array[i].endpoint[j].ep == cmd.deviceId){
+                        if(cmd.value == 2) device_array[i].endpoint[j].dev_type = 257;
+                        else if(cmd.value == 6) device_array[i].endpoint[j].dev_type = 769;
+                        else if(cmd.value == 0) device_array[i].endpoint[j].dev_type = 256; 
+
+                        device_array[i].endpoint[j].device_t.level = cmd.value;
+                        if(device_array[i].endpoint[j].cluster_counts > 0){
+                            for(int cl=0; cl<device_array[i].endpoint[j].cluster_counts; cl++){
+                                // if(device_array[i].endpoint[j].cluster_id[cl] != ESP_ZB_ZCL_CLUSTER_ID_ON_OFF){
+                                //     if(cmd.value == 6){
+                                //         device_array[i].endpoint[j].cluster_id[cl] = ESP_ZB_ZCL_CLUSTER_ID_FAN_CONTROL;
+                                //     } else if(cmd.value == 2){
+                                //         device_array[i].endpoint[j].cluster_id[cl] = ESP_ZB_ZCL_CLUSTER_ID_LEVEL_CONTROL;
+                                //     }
+                                // }
+                                // if(device_array[i].endpoint[j].cluster_id[cl] == ESP_ZB_ZCL_CLUSTER_ID_LEVEL_CONTROL){
+                                //     device_array[i].endpoint[j].cluster_id[cl] = ESP_ZB_ZCL_CLUSTER_ID_FAN_CONTROL;
+                                // }else if(device_array[i].endpoint[j].cluster_id[cl] == ESP_ZB_ZCL_CLUSTER_ID_FAN_CONTROL){
+                                //     device_array[i].endpoint[j].cluster_id[cl] = ESP_ZB_ZCL_CLUSTER_ID_LEVEL_CONTROL;
+                                // }
+                                save_or_update_light_bulb_device_to_nvs(&device_array[i]);
+                                break;
+                            }
+                        }                  
+                        //ESP_LOGI(TAG, "Device found, updating level to %d", cmd.value);
+                        break;
+                    }
+                }
+                break;
+            }  
+        }
+
+    }else if(cmd.command[0] == 'a' && cmd.command[1] == 'd' && cmd.command[2] == 'd' && cmd.command[3] == 'd'){
         printf("Sending response back to gateway : %s\n" , data);
-        //send_serial((char*)data);
-        //send_xbee_data_over_uart((char*), strlen(data), , -1);
-        
-        //stop_timer_10s();send_xbee_data_over_uart(data, strlen(data), ieee_addr, V_XbeeMsmgNextFrameId);
+        uart_send_bytes_to_gateway(original_frame, original_frame_length);
+        stop_timer_10s();
     } else if(cmd.command[0] == 'a' && cmd.command[1] == 'd' && cmd.command[2] == 'd' && cmd.command[3] == 'c'){
-        printf("Sending response back to gateway : %s\n" , data);
+        //printf("Sending response back to gateway : %s\n" , data);
         uint8_t nindex = 255;
         for(int i=0; i<devices_count; i++){
-            ESP_LOGI(TAG, "Addresses are equal");
+            //ESP_LOGI(TAG, "Addresses are equal");
             if(device_array[i].room_id == cmd.roomId && device_array[i].module_id == cmd.moduleId){
-                ESP_LOGI(TAG, "Device already exists in NVS, updating...");
+                //ESP_LOGI(TAG, "Device already exists in NVS, updating...");
             } else {
-                ESP_LOGI(TAG, "Device with same address but different room/module ID, updating...");
+                //ESP_LOGI(TAG, "Device with same address but different room/module ID, updating...");
                 if (memcmp(device_array[i].ieee_addr, ieee_addr, sizeof(esp_zb_ieee_addr_t)) == 0) {
                     nindex = i;
                     break;
                 } else {
-                    ESP_LOGI(TAG, "Addresses are different");
+                    //ESP_LOGI(TAG, "Addresses are different");
                 }
             }  
         }
@@ -717,11 +700,11 @@ void process_uart_data(const char* data, uint16_t len, esp_zb_ieee_addr_t ieee_a
         printf("\n");
         //send_xbee_data_over_uart(data, strlen(data), ieee_addr, V_XbeeMsmgNextFrameId);
         uart_send_bytes_to_gateway(original_frame, original_frame_length);
-
+        stop_timer_10s();
         if(nindex == 255){
             return;
         }
-        printf("After save to NVS devices_count:%d  nindex:%d\n", devices_count, nindex);
+        //printf("After save to NVS devices_count:%d  nindex:%d\n", devices_count, nindex);
 
         device_array[nindex].module_id = cmd.moduleId;
         device_array[nindex].room_id = cmd.roomId;
@@ -733,16 +716,18 @@ void process_uart_data(const char* data, uint16_t len, esp_zb_ieee_addr_t ieee_a
     	}
     // delc/1*1@0,-255!
     } else if(cmd.command[0] == 'd' && cmd.command[1] == 'e' && cmd.command[2] == 'l' && cmd.command[3] == 'c'){
-        send_xbee_data_over_uart(data, strlen(data), ieee_addr, V_XbeeMsmgNextFrameId);
+        
         node_module_t * module_remove = find_device_by_room_module_id(cmd.roomId, cmd.moduleId);
         if(module_remove != NULL){
             printf("nuos_zb_leave_device of module_id:%d did:%d\n", module_remove->room_id, module_remove->module_id);
             nuos_zb_leave_device(module_remove);
+        }else{
+            printf("Module to remove not found!!\n");
         }
+        send_xbee_data_over_uart(data, strlen(data), ieee_addr, V_XbeeMsmgNextFrameId);
     } else if(cmd.command[0] == 'c' && cmd.command[1] == 't' && cmd.command[2] == 'r' && cmd.command[3] == 'l'){
         send_xbee_data_over_uart(data, strlen(data), ieee_addr, V_XbeeMsmgNextFrameId);
-        
-        printf("Found ctrl Command!!\n");
+        //printf("Found ctrl Command!!\n");
         if(cmd.deviceId == 0){
             // Array mode
             didx[0] = 1;
@@ -757,7 +742,7 @@ void process_uart_data(const char* data, uint16_t len, esp_zb_ieee_addr_t ieee_a
             didx[0] = cmd.deviceId;
             value[0] = cmd.value;
         }
-        printf("roomId:%d   moduleId:%d   deviceId:%d\n", cmd.roomId, cmd.moduleId, didx[0]);
+        //printf("roomId:%d   moduleId:%d   deviceId:%d\n", cmd.roomId, cmd.moduleId, didx[0]);
         find_and_execute_ctrl_command(cmd.roomId, cmd.moduleId, didx, value, cmd.isArray);
 
     }else if(cmd.command[0] == 'c' && cmd.command[1] == 'n' && cmd.command[2] == 't' && cmd.command[3] == 'r'){
@@ -773,6 +758,9 @@ void find_and_execute_ctrl_command(uint8_t room_id, uint8_t module_id, int* didx
     uint8_t nodeindex=0, epindex=0;
     uint16_t node_type = 0;
     uint16_t color = 0;
+    uint8_t fan_speed = 0;
+    bool is_fan = false;
+    bool is_thermostat = false;
 
     node_module_t * module = find_device_by_room_module_id(room_id, module_id);
 
@@ -795,7 +783,7 @@ void find_and_execute_ctrl_command(uint8_t room_id, uint8_t module_id, int* didx
             uint8_t did = didx[i];
             if (didx[i] > 0 && didx[i] != -255) {
                 if (find_device_by_dev_id(module_id, did, &nodeindex, &epindex)) {
-                    printf("find_device_by_dev_id success!!\n");
+                    //printf("find_device_by_dev_id success!!\n");
 
                     if (node_type == 0) {
                         node_type = find_device_type(nodeindex, epindex);
@@ -819,8 +807,8 @@ void find_and_execute_ctrl_command(uint8_t room_id, uint8_t module_id, int* didx
                         case 257:
                             if (level == 0 || level == 255) {
                                 nuos_update_onoff_cluster(nodeindex, epindex, level ? true : false);
-                            } else {
-                                nuos_update_level_cluster(nodeindex, epindex, level);
+                            } else {                                
+                                nuos_update_level_cluster(nodeindex, epindex, fan_speed);
                             }
                             break;
                         case 269:
@@ -846,14 +834,32 @@ void find_and_execute_ctrl_command(uint8_t room_id, uint8_t module_id, int* didx
                             }
                             break;
                         case 769:
-                            {
-                                bool is_fan = is_fan_control(nodeindex, epindex);
-                                if (is_fan) {
-                                    zigbee_cluster_fan_control_attr_update(nodeindex, epindex, level);
-                                } else {
-                                    zigbee_cluster_thermostat_attr_update(nodeindex, epindex, level);
+                            is_fan = is_fan_control(nodeindex, epindex);
+                            if (is_fan) {
+                                
+                                if (level == 0) fan_speed = 0;
+                                if(level == 142) fan_speed = 191; 
+                                else if(level == 102) fan_speed = 128; 
+                                else if(level == 80) fan_speed = 64;
+                                else if(level == 255) fan_speed = 254;                                    
+                                zigbee_cluster_fan_control_attr_update(nodeindex, epindex, fan_speed);
+                            } else {
+                                is_thermostat = is_thermostat_control(nodeindex, epindex);
+                                if(is_thermostat) {
+                                    // For thermostat, level represents temperature setpoint
+                                     zigbee_cluster_thermostat_attr_update(nodeindex, epindex, level);
+                                }else{
+                                    
+                                    if (level == 0) fan_speed = 0;
+                                    if(level == 142) fan_speed = 191; 
+                                    else if(level == 102) fan_speed = 128; 
+                                    else if(level == 80) fan_speed = 64;
+                                    else if(level == 255) fan_speed = 254;    
+                                    nuos_update_level_cluster(nodeindex, epindex, fan_speed);                                                    
                                 }
+                               
                             }
+                            
                             break;
                         default:
                             break;
@@ -868,25 +874,6 @@ void find_and_execute_ctrl_command(uint8_t room_id, uint8_t module_id, int* didx
     }
 }
 
-void convert_xbee_to_esp_zigbee_addr_memcpy(const XBeeAddress64 &xbee_addr , esp_zb_ieee_addr_t zigbee_addr) {
-    XBeeAddress64& non_const_xbee = const_cast<XBeeAddress64&>(xbee_addr);
-    uint32_t msb = non_const_xbee.getMsb();
-    uint32_t lsb = non_const_xbee.getLsb();
-    
-    // Create temporary 32-bit variables in network byte order
-    uint32_t msb_be = __builtin_bswap32(msb);  // Convert to big-endian if needed
-    uint32_t lsb_be = __builtin_bswap32(lsb);
-    
-    // Copy to output array
-    memcpy(&zigbee_addr[4], &msb_be, 4);
-    memcpy(&zigbee_addr[0], &lsb_be, 4);
-    
-    printf("Converted XBee to Zigbee (memcpy): ");
-    for (int i = 0; i < 8; i++) {
-        printf("%02x", zigbee_addr[i]);
-    }
-    printf("\n");
-}
 
 void process_decrypt_uart_receiver_data(uint8_t* data, uint16_t len) {
 // Store byte in XBee's buffer
@@ -904,7 +891,7 @@ void process_decrypt_uart_receiver_data(uint8_t* data, uint16_t len) {
             ZBRxResponse rx;
             xbee.getResponse().getZBRxResponse(rx);
 
-            printf("Rx_len: %d\n", rx.getDataLength()-1);
+            //printf("Rx_len: %d\n", rx.getDataLength()-1);
             // Process received data
             char received_data[rx.getDataLength()-1 + 1];
             for(int i = 0; i < rx.getDataLength()-1; i++) {
@@ -919,7 +906,7 @@ void process_decrypt_uart_receiver_data(uint8_t* data, uint16_t len) {
             if (decrypted) {
                 printf( "decrypted:%s\n", decrypted);
                 esp_zb_ieee_addr_t zigbee_addr;
-                convert_xbee_to_esp_zigbee_addr_memcpy(rx.getRemoteAddress64(), zigbee_addr);
+                convert_xbee_to_zigbee_addr(rx.getRemoteAddress64(), zigbee_addr);
                 process_uart_data((const char*)decrypted, strlen(decrypted), zigbee_addr, data, len);
                 free(decrypted);
             }

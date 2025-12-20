@@ -91,6 +91,7 @@ extern void read_device_info();
 extern void zigbee_cluster_fan_control_attr_update(uint8_t node_i, uint8_t ep_i, uint8_t speed);
 extern void zigbee_cluster_thermostat_attr_update(uint8_t node_i, uint8_t ep_i, uint8_t temp);
 extern bool is_fan_control(uint8_t nodeindex, uint8_t epindex);
+extern bool is_thermostat_control(uint8_t nodeindex, uint8_t epindex);
 extern void nuos_update_curtain_cluster(uint8_t node_i, uint8_t ep_i, uint8_t curtain_state);
 
 extern void send_serial(const char* data);
