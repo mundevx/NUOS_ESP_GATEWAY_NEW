@@ -32,7 +32,6 @@ ZBTxStatusResponse txStatus                                     = ZBTxStatusResp
 // RemoteAtCommandResponse remoteAtResponse                        = RemoteAtCommandResponse();
 // Rx16Response rx16                                               = Rx16Response();
 
-
 #define XBEE_ADDR_H                                             0x0013A200
 #define XBEE_ADDR_L                                             0x421B379C
 
