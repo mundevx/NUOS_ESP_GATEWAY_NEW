@@ -742,7 +742,6 @@ void process_uart_data(const char* data, uint16_t len, esp_zb_ieee_addr_t ieee_a
             didx[0] = cmd.deviceId;
             value[0] = cmd.value;
         }
-        //printf("roomId:%d   moduleId:%d   deviceId:%d\n", cmd.roomId, cmd.moduleId, didx[0]);
         find_and_execute_ctrl_command(cmd.roomId, cmd.moduleId, didx, value, cmd.isArray);
 
     }else if(cmd.command[0] == 'c' && cmd.command[1] == 'n' && cmd.command[2] == 't' && cmd.command[3] == 'r'){
@@ -783,8 +782,6 @@ void find_and_execute_ctrl_command(uint8_t room_id, uint8_t module_id, int* didx
             uint8_t did = didx[i];
             if (didx[i] > 0 && didx[i] != -255) {
                 if (find_device_by_dev_id(module_id, did, &nodeindex, &epindex)) {
-                    //printf("find_device_by_dev_id success!!\n");
-
                     if (node_type == 0) {
                         node_type = find_device_type(nodeindex, epindex);
                     }
@@ -793,7 +790,6 @@ void find_and_execute_ctrl_command(uint8_t room_id, uint8_t module_id, int* didx
                     }else{
                         level = val[0];
                     }
-                    // printf("nodeindex:%d, level:%d epindex:%d \n", nodeindex, level, epindex);
                     switch (node_type) {
                         case 4:
                         case 0:
@@ -849,7 +845,6 @@ void find_and_execute_ctrl_command(uint8_t room_id, uint8_t module_id, int* didx
                                     // For thermostat, level represents temperature setpoint
                                      zigbee_cluster_thermostat_attr_update(nodeindex, epindex, level);
                                 }else{
-                                    
                                     if (level == 0) fan_speed = 0;
                                     if(level == 142) fan_speed = 191; 
                                     else if(level == 102) fan_speed = 128; 
@@ -857,9 +852,7 @@ void find_and_execute_ctrl_command(uint8_t room_id, uint8_t module_id, int* didx
                                     else if(level == 255) fan_speed = 254;    
                                     nuos_update_level_cluster(nodeindex, epindex, fan_speed);                                                    
                                 }
-                               
                             }
-                            
                             break;
                         default:
                             break;
@@ -890,8 +883,6 @@ void process_decrypt_uart_receiver_data(uint8_t* data, uint16_t len) {
         if(xbee.getResponse().getApiId() == ZB_TX_REQUEST) {
             ZBRxResponse rx;
             xbee.getResponse().getZBRxResponse(rx);
-
-            //printf("Rx_len: %d\n", rx.getDataLength()-1);
             // Process received data
             char received_data[rx.getDataLength()-1 + 1];
             for(int i = 0; i < rx.getDataLength()-1; i++) {
