@@ -463,16 +463,56 @@ static void build_ctrl_string(node_module_t *node, int start_idx, int idx, char 
         // Single endpoint form: "addc/room_id*module_id@idx,255!"
         // clamp index into 1..MAX_DEVICES_IN_MODULE
         if (start_idx > MAX_DEVICES_IN_MODULE) start_idx = MAX_DEVICES_IN_MODULE;
-        snprintf(out, out_size, "ctrl/%d*%u@%d,%d!",
-                 node->room_id, node->module_id, node->endpoint[idx].ep, node->endpoint[idx].device_t.level);
+
+        switch (node->endpoint[idx].dev_type){
+            case ESP_ZB_HA_IAS_ZONE_ID:
+                if(!node->endpoint[idx].device_t.state){
+                    snprintf(out, out_size, "senm/%d*%u@%d,%d!",
+                            node->room_id, node->module_id, node->endpoint[idx].ep, 0);
+                }else{
+
+                    snprintf(out, out_size, "senm/%d*%u@%d,%d!",
+                            node->room_id, node->module_id, node->endpoint[idx].ep, node->endpoint[idx].device_t.level);
+                }  
+                break;
+            
+            default:
+
+                if(!node->endpoint[idx].device_t.state){
+                    snprintf(out, out_size, "ctrl/%d*%u@%d,%d!",
+                            node->room_id, node->module_id, node->endpoint[idx].ep, 0);
+                }else{
+
+                    snprintf(out, out_size, "ctrl/%d*%u@%d,%d!",
+                            node->room_id, node->module_id, node->endpoint[idx].ep, node->endpoint[idx].device_t.level);
+                }            
+                break;
+        }
+
+
+        
+
     }
+}
+
+
+extern "C" void send_module_motion_sensor_unconfigured_over_uart(esp_zb_ieee_addr_t ieee_addr) {
+    const char* configured_str = "motn/255*255@0,255!";
+    // printf(configured_str);
+    send_xbee_data_over_uart(configured_str, strlen(configured_str), ieee_addr, -1);
+}
+
+extern "C" void send_module_ir_unconfigured_over_uart(esp_zb_ieee_addr_t ieee_addr) {
+    const char* configured_str = "irbl/255*255@0,255!";
+    // printf(configured_str);
+    send_xbee_data_over_uart(configured_str, strlen(configured_str), ieee_addr, -1);
 }
 
 extern "C" void send_module_unconfigured_over_uart(esp_zb_ieee_addr_t ieee_addr) {
     const char* unconfigured_str = "cntr/255*255@0,-255!";
     // printf(unconfigured_str);
     send_xbee_data_over_uart(unconfigured_str, strlen(unconfigured_str), ieee_addr, -1);
-    start_timer_10s(ieee_addr);
+    //start_timer_10s(ieee_addr);
 }
 
 extern "C" void send_module_remove_device_on_uart(uint8_t room_id, uint8_t module_id, esp_zb_ieee_addr_t ieee_addr) {
@@ -614,6 +654,8 @@ CtrlCommand parseCtrlMsg(const char* msg) {
     return cmd;
 }
 
+esp_zb_ieee_addr_t dst_ieee;
+
 void process_uart_data(const char* data, uint16_t len, esp_zb_ieee_addr_t ieee_addr, uint8_t* original_frame, uint8_t original_frame_length) 
 {
 
@@ -631,65 +673,83 @@ void process_uart_data(const char* data, uint16_t len, esp_zb_ieee_addr_t ieee_a
     // Forward parsed data 
 
     //edtd/1*3@2,1!
-    if(cmd.command[0] == 'e' && cmd.command[1] == 'd' && cmd.command[2] == 't' && cmd.command[3] == 'd'){
+    if(cmd.command[0] == 'e' && cmd.command[1] == 'd' && cmd.command[2] == 't' && (cmd.command[3] == 'c' || cmd.command[3] == 'b' || cmd.command[3] == 'm' || cmd.command[3] == '0' || cmd.command[3] == '4')){
 
         uart_send_bytes_to_gateway(original_frame, original_frame_length);
-        for(int i=0; i<devices_count; i++){
-            if(device_array[i].room_id == cmd.roomId && device_array[i].module_id == cmd.moduleId){
-                //ESP_LOGI(TAG, "Addresses are equal");
-                for(int j=0; j<device_array[i].ep_counts; j++){
-                    if(device_array[i].endpoint[j].ep == cmd.deviceId){
-                        if(cmd.value == 2) device_array[i].endpoint[j].dev_type = 257;
-                        else if(cmd.value == 6) device_array[i].endpoint[j].dev_type = 769;
-                        else if(cmd.value == 0) device_array[i].endpoint[j].dev_type = 256; 
+        for(int i=0; i<devices_count; i++){    
+            
+                if(device_array[i].room_id == cmd.roomId && device_array[i].module_id == cmd.moduleId){
+                    for(int j=0; j<device_array[i].ep_counts; j++){
+                        if(device_array[i].endpoint[j].ep == cmd.deviceId){
+                            if(cmd.value == 0) device_array[i].endpoint[j].dev_type = ESP_ZB_HA_ON_OFF_LIGHT_DEVICE_ID;
+                            
+                            else if(cmd.value == 2) device_array[i].endpoint[j].dev_type = ESP_ZB_HA_ON_OFF_LIGHT_DEVICE_ID;  //on off led
+                            else if(cmd.value == 3) device_array[i].endpoint[j].dev_type = ESP_ZB_HA_ON_OFF_LIGHT_DEVICE_ID;  //on off bulb
+                            else if(cmd.value == 4) device_array[i].endpoint[j].dev_type = ESP_ZB_HA_ON_OFF_LIGHT_DEVICE_ID;  //on off cfl
 
-                        device_array[i].endpoint[j].device_t.level = cmd.value;
-                        if(device_array[i].endpoint[j].cluster_counts > 0){
-                            for(int cl=0; cl<device_array[i].endpoint[j].cluster_counts; cl++){
-                                // if(device_array[i].endpoint[j].cluster_id[cl] != ESP_ZB_ZCL_CLUSTER_ID_ON_OFF){
-                                //     if(cmd.value == 6){
-                                //         device_array[i].endpoint[j].cluster_id[cl] = ESP_ZB_ZCL_CLUSTER_ID_FAN_CONTROL;
-                                //     } else if(cmd.value == 2){
-                                //         device_array[i].endpoint[j].cluster_id[cl] = ESP_ZB_ZCL_CLUSTER_ID_LEVEL_CONTROL;
-                                //     }
-                                // }
-                                // if(device_array[i].endpoint[j].cluster_id[cl] == ESP_ZB_ZCL_CLUSTER_ID_LEVEL_CONTROL){
-                                //     device_array[i].endpoint[j].cluster_id[cl] = ESP_ZB_ZCL_CLUSTER_ID_FAN_CONTROL;
-                                // }else if(device_array[i].endpoint[j].cluster_id[cl] == ESP_ZB_ZCL_CLUSTER_ID_FAN_CONTROL){
-                                //     device_array[i].endpoint[j].cluster_id[cl] = ESP_ZB_ZCL_CLUSTER_ID_LEVEL_CONTROL;
-                                // }
-                                save_or_update_light_bulb_device_to_nvs(&device_array[i]);
-                                break;
+                            else if(cmd.value == 6) device_array[i].endpoint[j].dev_type = ESP_ZB_HA_THERMOSTAT_DEVICE_ID;  //dimmable fan
+
+                            else if(cmd.value == 7) device_array[i].endpoint[j].dev_type = ESP_ZB_HA_DIMMABLE_LIGHT_DEVICE_ID;  //dimmable triac
+                            else if(cmd.value == 8) device_array[i].endpoint[j].dev_type = ESP_ZB_HA_DIMMABLE_LIGHT_DEVICE_ID;  //dimmable z10
+                            else if(cmd.value == 9) device_array[i].endpoint[j].dev_type = ESP_ZB_HA_DIMMABLE_LIGHT_DEVICE_ID;  //dimmable TE
+                            else if(cmd.value == 10) device_array[i].endpoint[j].dev_type = ESP_ZB_HA_DIMMABLE_LIGHT_DEVICE_ID;
+
+                            else if(cmd.value == 18) device_array[i].endpoint[j].dev_type = ESP_ZB_HA_WINDOW_COVERING_DEVICE_ID; //curtain motor
+
+                            else if(cmd.value == 11) device_array[i].endpoint[j].dev_type = ESP_ZB_HA_THERMOSTAT_DEVICE_ID; //DEVICE_TYPE_AC
+                            else if(cmd.value == 43) device_array[i].endpoint[j].dev_type = ESP_ZB_HA_THERMOSTAT_DEVICE_ID; //DEVICE_TYPE_IR_TEMP_SET
+                            else if(cmd.value == 44) device_array[i].endpoint[j].dev_type = ESP_ZB_HA_THERMOSTAT_DEVICE_ID; //DEVICE_TYPE_IR_POWER_ONOFF
+
+
+                            else if(cmd.value == 12) device_array[i].endpoint[j].dev_type = ESP_ZB_HA_IAS_ZONE_ID;  //DEVICE_TYPE_TEMPERATURE_SENSOR
+                            else if(cmd.value == 13) device_array[i].endpoint[j].dev_type = ESP_ZB_HA_IAS_ZONE_ID;  //DEVICE_TYPE_HUMIDITY_SENSOR
+                            else if(cmd.value == 14) device_array[i].endpoint[j].dev_type = ESP_ZB_HA_IAS_ZONE_ID;  //DEVICE_TYPE_DOOR_SENSOR
+
+                            else if(cmd.value == 16) device_array[i].endpoint[j].dev_type = ESP_ZB_HA_IAS_ZONE_ID;  //DEVICE_TYPE_OCCUPANCY_SENSOR
+
+                            else if(cmd.value == 26) device_array[i].endpoint[j].dev_type = ESP_ZB_HA_IAS_ZONE_ID;  //DEVICE_TYPE_OCCUPANCY_ON_OFF_TIME_MIN
+                            else if(cmd.value == 27) device_array[i].endpoint[j].dev_type = ESP_ZB_HA_IAS_ZONE_ID;  //DEVICE_TYPE_LUX_SENSOR
+                            else if(cmd.value == 28) device_array[i].endpoint[j].dev_type = ESP_ZB_HA_IAS_ZONE_ID;  //DEVICE_TYPE_SMOKE_SENSOR
+
+
+                            printf("Gateway dev_type:%d  Zigbee dev_type: %d\n",cmd.value, device_array[i].endpoint[j].dev_type);
+                            device_array[i].endpoint[j].device_t.level = cmd.value;
+                            if(device_array[i].endpoint[j].cluster_counts > 0){
+                                for(int cl=0; cl<device_array[i].endpoint[j].cluster_counts; cl++){
+                                    save_or_update_light_bulb_device_to_nvs(&device_array[i]);
+                                    break;
+                                }
                             }
-                        }                  
-                        //ESP_LOGI(TAG, "Device found, updating level to %d", cmd.value);
-                        break;
+                            break;
+                        }
                     }
-                }
-                break;
-            }  
+                    break;
+                }  
+            
         }
 
     }else if(cmd.command[0] == 'a' && cmd.command[1] == 'd' && cmd.command[2] == 'd' && cmd.command[3] == 'd'){
         printf("Sending response back to gateway : %s\n" , data);
         uart_send_bytes_to_gateway(original_frame, original_frame_length);
         stop_timer_10s();
-    } else if(cmd.command[0] == 'a' && cmd.command[1] == 'd' && cmd.command[2] == 'd' && cmd.command[3] == 'c'){
+    } else if(cmd.command[0] == 'a' && cmd.command[1] == 'd' && cmd.command[2] == 'd' && (cmd.command[3] == 'c' || cmd.command[3] == 'b' || cmd.command[3] == 'm' || cmd.command[3] == '0' || cmd.command[3] == '4')){
         //printf("Sending response back to gateway : %s\n" , data);
         uint8_t nindex = 255;
         for(int i=0; i<devices_count; i++){
-            //ESP_LOGI(TAG, "Addresses are equal");
-            if(device_array[i].room_id == cmd.roomId && device_array[i].module_id == cmd.moduleId){
-                //ESP_LOGI(TAG, "Device already exists in NVS, updating...");
-            } else {
-                //ESP_LOGI(TAG, "Device with same address but different room/module ID, updating...");
-                if (memcmp(device_array[i].ieee_addr, ieee_addr, sizeof(esp_zb_ieee_addr_t)) == 0) {
-                    nindex = i;
-                    break;
+            // if (memcmp(dst_ieee, ieee_addr, sizeof(esp_zb_ieee_addr_t)) == 0) {
+                ESP_LOGI(TAG, "ieee addresses are equals!!");
+                if(device_array[i].room_id == cmd.roomId && device_array[i].module_id == cmd.moduleId){
+                    //ESP_LOGI(TAG, "Device already exists in NVS, updating...");
                 } else {
-                    //ESP_LOGI(TAG, "Addresses are different");
-                }
-            }  
+                    //ESP_LOGI(TAG, "Device with same address but different room/module ID, updating...");
+                    if (memcmp(device_array[i].ieee_addr, ieee_addr, sizeof(esp_zb_ieee_addr_t)) == 0) {
+                        nindex = i;
+                        break;
+                    } else {
+                        //ESP_LOGI(TAG, "Addresses are different");
+                    }
+                } 
+            //} 
         }
         printf("\n\n--->Sending bytes to gateway back: \n");
         for(int i = 0; i < original_frame_length; i++) {
@@ -714,7 +774,7 @@ void process_uart_data(const char* data, uint16_t len, esp_zb_ieee_addr_t ieee_a
     		read_all_devices_from_nvs(NULL);
     	}
     // delc/1*1@0,-255!
-    } else if(cmd.command[0] == 'd' && cmd.command[1] == 'e' && cmd.command[2] == 'l' && cmd.command[3] == 'c'){
+    } else if(cmd.command[0] == 'd' && cmd.command[1] == 'e' && cmd.command[2] == 'l' && (cmd.command[3] == 'c' || cmd.command[3] == 'b' || cmd.command[3] == 'm' || cmd.command[3] == '0' || cmd.command[3] == '4')){
         
         node_module_t * module_remove = find_device_by_room_module_id(cmd.roomId, cmd.moduleId);
         if(module_remove != NULL){
@@ -726,7 +786,6 @@ void process_uart_data(const char* data, uint16_t len, esp_zb_ieee_addr_t ieee_a
         send_xbee_data_over_uart(data, strlen(data), ieee_addr, V_XbeeMsmgNextFrameId);
     } else if(cmd.command[0] == 'c' && cmd.command[1] == 't' && cmd.command[2] == 'r' && cmd.command[3] == 'l'){
         send_xbee_data_over_uart(data, strlen(data), ieee_addr, V_XbeeMsmgNextFrameId);
-        //printf("Found ctrl Command!!\n");
         if(cmd.deviceId == 0){
             // Array mode
             didx[0] = 1;
@@ -744,9 +803,28 @@ void process_uart_data(const char* data, uint16_t len, esp_zb_ieee_addr_t ieee_a
         find_and_execute_ctrl_command(cmd.roomId, cmd.moduleId, didx, value, cmd.isArray);
 
     }else if(cmd.command[0] == 'c' && cmd.command[1] == 'n' && cmd.command[2] == 't' && cmd.command[3] == 'r'){
-        // unconfigured command
-        //send_xbee_data_over_uart(data, strlen(data), ieee_addr, V_XbeeMsmgNextFrameId);
-        //uart_send_bytes_to_gateway( original_frame, original_frame_length);
+
+        memcpy(dst_ieee, ieee_addr, sizeof(esp_zb_ieee_addr_t));
+    }else if(cmd.command[0] == 'm' && cmd.command[1] == 'o' && cmd.command[2] == 't' && cmd.command[3] == 'n'){
+
+        memcpy(dst_ieee, ieee_addr, sizeof(esp_zb_ieee_addr_t));
+
+    }else if(cmd.command[0] == 'i' && cmd.command[1] == 'r' && cmd.command[2] == 'b' && cmd.command[3] == 'l'){
+
+        memcpy(dst_ieee, ieee_addr, sizeof(esp_zb_ieee_addr_t));       
+        
+    }else if(cmd.command[0] == 'g' && cmd.command[1] == 'a' && cmd.command[2] == 's' && cmd.command[3] == 'l'){
+
+        memcpy(dst_ieee, ieee_addr, sizeof(esp_zb_ieee_addr_t));  
+        
+    }else if(cmd.command[0] == 's' && cmd.command[1] == 'c' && cmd.command[2] == 'e' && cmd.command[3] == 'n'){
+
+        memcpy(dst_ieee, ieee_addr, sizeof(esp_zb_ieee_addr_t));
+
+    }else if(cmd.command[0] == 'd' && cmd.command[1] == 'o' && cmd.command[2] == 'o' && cmd.command[3] == 'r'){
+
+        memcpy(dst_ieee, ieee_addr, sizeof(esp_zb_ieee_addr_t));           
+        
     }
 }
 
@@ -789,24 +867,33 @@ void find_and_execute_ctrl_command(uint8_t room_id, uint8_t module_id, int* didx
                     }else{
                         level = val[0];
                     }
+                    printf("Executing ctrl command on nodeindex:%d epindex:%d level:%d\n", nodeindex, epindex, level);
+                    printf("Device type: %d\n", node_type);
                     switch (node_type) {
-                        case 4:
-                        case 0:
+                        case ESP_ZB_HA_SCENE_SELECTOR_DEVICE_ID:
+                        case ESP_ZB_HA_ON_OFF_SWITCH_DEVICE_ID:
                             if (get_total_endpoints(nodeindex) <= 2) {
                                 nuos_update_curtain_cluster(nodeindex, epindex, level);
                             } else {
                                 printf("Scene pressed!!\n");
                             }
                             break;
-                        case 256:
-                        case 257:
+                        case ESP_ZB_HA_ON_OFF_LIGHT_DEVICE_ID:
+                        
                             if (level == 0 || level == 255) {
                                 nuos_update_onoff_cluster(nodeindex, epindex, level ? true : false);
-                            } else {                                
-                                nuos_update_level_cluster(nodeindex, epindex, fan_speed);
                             }
                             break;
-                        case 269:
+                        case ESP_ZB_HA_DIMMABLE_LIGHT_DEVICE_ID:   //level dimming
+                            if (level == 0 || level == 255) {
+                                nuos_update_onoff_cluster(nodeindex, epindex, level ? true : false);
+                            }
+                            if (level > 0) {                                
+                                nuos_update_level_cluster(nodeindex, epindex, level);
+                            }
+                            break;
+
+                        case 0x010D:  //color light
                             if (color > 0) {
                                 nuos_update_color_hue(nodeindex, epindex, color);
                             } else {
@@ -817,7 +904,7 @@ void find_and_execute_ctrl_command(uint8_t room_id, uint8_t module_id, int* didx
                                 }
                             }
                             break;
-                        case 268:  // color temperature
+                        case 0x010C:  // color temperature
                             if (color > 0) {
                                 nuos_update_color_temperature(nodeindex, epindex, color);
                             } else {
@@ -828,10 +915,43 @@ void find_and_execute_ctrl_command(uint8_t room_id, uint8_t module_id, int* didx
                                 }
                             }
                             break;
-                        case 769:
+                        case ESP_ZB_HA_WINDOW_COVERING_DEVICE_ID:
+                            if(epindex == 0){
+                                if(device_array[nodeindex].endpoint[1].device_t.state){
+                                    if (level == 0) {
+                                        // Close
+                                        device_array[nodeindex].endpoint[0].device_t.state = true;
+                                        nuos_send_window_covering_command(nodeindex, 0, 0x01);
+                                    } else if (level == 18) {
+                                        // Open
+                                        device_array[nodeindex].endpoint[0].device_t.state = false;
+                                        nuos_send_window_covering_command(nodeindex, 0, 0x00);
+                                    }
+                                }
+                            }else if(epindex == 1){
+                                if(level == 0){
+                                    device_array[nodeindex].endpoint[1].device_t.state = false;
+                                    // Stop
+                                    nuos_send_window_covering_command(nodeindex, 0, 0x02);
+                                }else{
+                                    device_array[nodeindex].endpoint[1].device_t.state = true;
+                                }
+                            }
+                            break;    
+                        case ESP_ZB_HA_CUSTOM_ATTR_DEVICE_ID:
+                            printf("ESP_ZB_ZCL_CLUSTER_ID_THERMOSTAT  custom cluster attr\n");
+                            write_custom_cluster_attr(0xFC31, device_array[nodeindex].short_addr, device_array[nodeindex].endpoint[epindex].ep, level);
+                            //0xFC31
+                        break;
+
+                        case ESP_ZB_HA_IAS_ZONE_ID:
+
+                        break;
+
+                        case ESP_ZB_HA_THERMOSTAT_DEVICE_ID:
                             is_fan = is_fan_control(nodeindex, epindex);
                             if (is_fan) {
-                                
+                                printf("Fan control detected!!\n");
                                 if (level == 0) fan_speed = 0;
                                 if(level == 142) fan_speed = 191; 
                                 else if(level == 102) fan_speed = 128; 
@@ -841,8 +961,19 @@ void find_and_execute_ctrl_command(uint8_t room_id, uint8_t module_id, int* didx
                             } else {
                                 is_thermostat = is_thermostat_control(nodeindex, epindex);
                                 if(is_thermostat) {
+                                    printf("Thermostat control detected!!\n");
                                     // For thermostat, level represents temperature setpoint
-                                     zigbee_cluster_thermostat_attr_update(nodeindex, epindex, level);
+                                    if(epindex == 0){
+                                        printf("Writing attr Temperature :%d\n", level);
+                                        zigbee_cluster_thermostat_attr_update(nodeindex, epindex, level); 
+                                    } else if(epindex == 1){
+                                        printf("Writing attr State :%d\n", level);
+                                        zigbee_cluster_thermostat_state_attr_update(nodeindex, epindex, level);    
+                                    }else if(epindex == 2){
+                                        printf("Writing attr Custom :%d\n", level);
+                                        
+                                    }
+                                     
                                 }else{
                                     if (level == 0) fan_speed = 0;
                                     if(level == 142) fan_speed = 191; 
@@ -858,6 +989,29 @@ void find_and_execute_ctrl_command(uint8_t room_id, uint8_t module_id, int* didx
                     }
                 } else {
                     printf("did not found!!\n");
+                    if (didx[i] == 0) {
+                        level = val[i];
+                    }else{
+                        level = val[0];
+                    }
+                    if (find_device_by_dev_id(module_id, 1, &nodeindex, &epindex)) {
+                        if (node_type == 0) {
+                            node_type = find_device_type(nodeindex, epindex);
+                        }
+                    }
+                    printf("Device type: %d\n", node_type);
+                    switch (node_type) {
+                        case ESP_ZB_HA_WINDOW_COVERING_DEVICE_ID:
+                            if (level == 0) {
+                                // Stop
+                                nuos_send_window_covering_command(nodeindex, epindex, 0x02);
+                            } else {
+                                
+                            }
+                            break;                         
+                        default:
+                            break;
+                    }
                 }
             }
         }

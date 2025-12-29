@@ -11,7 +11,7 @@ extern "C" {
 
     void process_uart_data(const char* data, uint16_t len, esp_zb_ieee_addr_t ieee_addr, uint8_t* original_frame, uint8_t original_frame_length);
     void send_uart_command_in_array(node_module_t *node, const char *cmd);
-    extern void send_module_unconfigured_over_uart(esp_zb_ieee_addr_t ieee_addr);
+    
     void send_module_ctrl_over_uart(node_module_t *node, int start_idx, int idx);                                                    
     int uart_putc(uint8_t byte);    
     int uart_put_all(uint8_t *byte, uint8_t len); 
@@ -21,6 +21,10 @@ extern "C" {
     char* Fn_ENCRYPT_DATA(const char* V_RECEIVED_DATA_STR);
     void find_and_execute_ctrl_command(uint8_t room_id, uint8_t module_id, int* didx, int *val, bool isArray);
     void process_decrypt_uart_receiver_data( uint8_t* data, uint16_t len);
+
+    extern void send_module_unconfigured_over_uart(esp_zb_ieee_addr_t ieee_addr);
+    extern void send_module_ir_unconfigured_over_uart(esp_zb_ieee_addr_t ieee_addr);
+    extern void send_module_motion_sensor_unconfigured_over_uart(esp_zb_ieee_addr_t ieee_addr);
 #ifdef __cplusplus
     }
 #endif                      

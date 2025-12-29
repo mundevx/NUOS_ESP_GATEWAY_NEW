@@ -565,7 +565,7 @@ void print_devices_compact() {
                 device->ieee_addr[0], device->ieee_addr[1], device->ieee_addr[2],
                 device->ieee_addr[3], device->ieee_addr[4], device->ieee_addr[5],
                 device->ieee_addr[6], device->ieee_addr[7]);
-        
+               /////////////////////////////////////////////////////////////        
         printf("%3d | %5d | %4d |   0x%04X  | %s | %6s | %3d | %s",
                i, device->module_id, device->room_id, device->short_addr,
                ieee_str, device->is_active ? "Yes" : "No", 
@@ -575,11 +575,8 @@ void print_devices_compact() {
                for(int j=0; j<device->ep_counts; j++){
                    printf(" 0x%d", device->endpoint[j].dev_type);   
                }
-        
         printf("\n");
-
     }
-    
     printf("\n");
 }
 

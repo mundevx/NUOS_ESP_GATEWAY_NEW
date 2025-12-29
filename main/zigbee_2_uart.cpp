@@ -23,13 +23,7 @@ static const char *TAG                                          = "ESP_ZB_TO_UAR
 #define UART_BAUD_RATE                                          115200
 #define UART_BUF_SIZE                                           (1024)
 
-
-// void stop_timer_10s(void);
-// void start_timer_10s(esp_zb_ieee_addr_t ieee_addr);
-
-
-//void send_module_unconfigured_over_uart();
-
+static portMUX_TYPE uart_mutex = portMUX_INITIALIZER_UNLOCKED;
 
 void uart_receiver_task(void *arg) {
     static uint8_t data[UART_BUF_SIZE] = {0}; 
@@ -49,54 +43,10 @@ void uart_receiver_task(void *arg) {
 
             process_decrypt_uart_receiver_data( data, len);
 
-            // // Store byte in XBee's buffer
-            // memcpy(xbee.serial_read_data, (const uint8_t*)data, len);
-            // xbee.serial_read_data[len] = '\0'; // Null terminate for single byte
-            // xbee.serial_read_data_counter = 0;
-            // xbee.serial_data_available = true;
-        
-            // // Process the byte through XBee parser
-            // xbee.readPacket();
-            // // Check if we have a complete response
-            // if(xbee.getResponse().isAvailable()) {
-            //     printf("XBee Response Available. API ID: 0x%02X\n", xbee.getResponse().getApiId());
-            //     if(xbee.getResponse().getApiId() == ZB_TX_REQUEST) {
-            //         ZBRxResponse rx;
-            //         xbee.getResponse().getZBRxResponse(rx);
-
-            //         printf("Rx_len: %d\n", rx.getDataLength()-1);
-            //         // Process received data
-            //         char received_data[rx.getDataLength()-1 + 1];
-            //         for(int i = 0; i < rx.getDataLength()-1; i++) {
-            //             received_data[i] = rx.getData(1+i);
-            //             printf(" %02x", received_data[i]);
-            //         }
-            //         printf("\n");
-            //         received_data[rx.getDataLength()-1] = '\0';
-
-            //         //char encrypted_buffer[256];
-            //         char* decrypted = Fn_DECRYPT_DATA(received_data);
-            //         if (decrypted) {
-            //             printf( "decrypted:%s\n", decrypted);
-            //             esp_zb_ieee_addr_t zigbee_addr;// = {0x00, 0x13 , 0xa2 , 0x00 , 0x42, 0x1b, 0x37, 0x9c};
-            //             convert_xbee_to_esp_zigbee_addr_memcpy(rx.getRemoteAddress64(), zigbee_addr);
-
-            //             //send_xbee_data_over_uart(decrypted, strlen(decrypted), zigbee_addr, data[4]);
-            //             process_uart_data((const char*)decrypted, strlen(decrypted), zigbee_addr, data, len);
-            //             free(decrypted);
-            //         }
-            //     }
-            // } else {
-            //     printf("No complete XBee response available yet.\n");
-            // }
-            
         }
        
     }
 }
-
-
-static portMUX_TYPE uart_mutex = portMUX_INITIALIZER_UNLOCKED;
 
 const uart_config_t uart_config = {
     .baud_rate = 115200,

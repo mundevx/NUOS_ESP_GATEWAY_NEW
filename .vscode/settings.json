@@ -1,5 +1,5 @@
 {
-    "idf.portWin": "COM14",
+    "idf.portWin": "COM5",
     "idf.openOcdConfigs": [
         "board/esp32h2-ftdi.cfg"
     ],
