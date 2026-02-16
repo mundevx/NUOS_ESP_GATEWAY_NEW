@@ -56,7 +56,15 @@
 // Declare the semaphore handle globally
 SemaphoreHandle_t task_done_semaphore;
 
+typedef struct {
+    node_module_t module;
+    uint8_t index;
+} node_module_evt_t;
+static QueueHandle_t send_to_uart_evt_queue = NULL;
+
 static const char *TAG = "ESP_ZB_GATEWAY";
+
+void nuos_zb_read_attributes_from_clusters(uint16_t cluster_id, uint8_t dst_ep, uint16_t short_addr);
 
 /* Production configuration app data */
 typedef struct app_production_config_s {
@@ -132,11 +140,30 @@ TaskHandle_t commissioningTaskHandle;
 
 static void ep_cb(esp_zb_zdp_status_t zdo_status, uint8_t ep_count, uint8_t *ep_id_list, void *user_ctx);
 
-void write_custom_cluster_attr(uint16_t cluster_id, uint16_t dst_short_addr, uint8_t dst_ep, uint8_t custom_value);
+void write_custom_cluster_attr(uint16_t cluster_id, uint8_t custom_cmd_id, uint16_t dst_short_addr, uint8_t dst_ep, uint8_t custom_value);
 
 #define ARRAY_LENGTH(arr) (sizeof(arr) / sizeof(arr[0]))
 
-void init_variables(){
+static QueueHandle_t nvs_save_queue = NULL;
+
+typedef struct {
+    uint8_t node_i;
+} nvs_save_evt_t;
+
+
+extern void nuos_zb_scenes_store_scene_request(uint16_t group_id, uint8_t scene_id, 
+                                        uint8_t src_ep, uint8_t dst_ep, 
+                                        uint16_t dst_addr_short);
+
+extern void nuos_zb_scene_recall_scene_request(uint16_t group_id, uint8_t scene_id, 
+										uint8_t src_ep, 
+                                        uint8_t dst_ep, uint16_t dst_addr_short, 
+										esp_zb_zcl_address_mode_t address_mode);
+
+
+
+void init_variables() {
+
 	timer_door_open_initialized_ok 					= false;
 	timer_started_flag_2 							= false;
 	start_getting_door_open_detetced_flag 			= false;
@@ -151,7 +178,19 @@ void init_variables(){
 	zb_commissioning_counts 						= 0;
 }
 
+void nvs_save_device_task(void *arg)
+{
+    nvs_save_evt_t evt;
 
+    while (1) {
+        if (xQueueReceive(nvs_save_queue, &evt, portMAX_DELAY)) {
+            //printf("Saving device %d to NVS\n", evt.node_i);
+            save_or_update_light_bulb_device_to_nvs(
+                &device_array[evt.node_i]
+            );
+        }
+    }
+}
 
 void nuos_zb_init_hardware(){
 
@@ -169,8 +208,20 @@ void nuos_zb_init_hardware(){
     }
     init_variables();
 	uart_init();
+	nvs_save_queue = xQueueCreate(10, sizeof(nvs_save_evt_t));
+    assert(nvs_save_queue);
+
+	xTaskCreate(
+        nvs_save_device_task,
+        "nvs_save_dtask",
+        4096,
+        NULL,
+        TASK_PRIORITY_NVS_SAVE,
+        NULL
+    );
 	//send_serial("Welcome Gateway!!\n");
 }
+
 
 void set_all_led_state(bool state){
 	for(int index=0; index<MAX_SWITCHES_TO_CONTROL; index++){
@@ -215,9 +266,11 @@ void turn_on_commissioning_led_switch(){
 		time_zb_commissioning_started_flag = true;
 		zb_commissioning_counts = 0;
 		esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_NETWORK_FORMATION);
-		xTaskCreate(set_commissioning_task, "commissioning_task", 2098, NULL, 15, &commissioningTaskHandle);
+		xTaskCreate(set_commissioning_task, "commissioning_task", 2098, NULL, TASK_PRIORITY_ZB_COMMISSIONING, &commissioningTaskHandle);
 	}
 }
+
+
 
 
 bool is_fan_control(uint8_t nodeindex, uint8_t epindex){
@@ -268,6 +321,7 @@ void set_commissioning_task(void* arg) {
  }
 
 static void esp_app_zb_attribute_handler(uint16_t short_addr, uint8_t end_point, uint16_t cluster_id, const esp_zb_zcl_attribute_t* attribute){
+	
 	switch(cluster_id){
 		case ESP_ZB_ZCL_CLUSTER_ID_BASIC:
 	        if (attribute->id == ESP_ZB_ZCL_ATTR_BASIC_MANUFACTURER_NAME_ID &&
@@ -291,57 +345,72 @@ static void esp_app_zb_attribute_handler(uint16_t short_addr, uint8_t end_point,
 	            free(string);
 	        }
 			break;
+
 		case ESP_ZB_ZCL_CLUSTER_ID_ON_OFF:
 		    for(int k=0; k<devices_count; k++){
 		    	for(int j=0; j<device_array[k].ep_counts; j++){
 		    		if(short_addr == device_array[k].short_addr){
-						
 						for(int cl=0; cl<device_array[k].endpoint[j].cluster_counts; cl++){
 							if(device_array[k].endpoint[j].cluster_id[cl] == ESP_ZB_ZCL_CLUSTER_ID_ON_OFF){
-								//ESP_LOGI(TAG, "ESP_ZB_ZCL_CLUSTER_ID_ON_OFF");
+								//
 								if(end_point == device_array[k].endpoint[j].ep){
-									//ESP_LOGI(TAG, "end_point:%d attr_id:0x%04X attr_id:%d", end_point, attribute->id, attribute->data.type);
+									//printf("CLUSTER_ID_1:0x%X\n", device_array[k].endpoint[j].cluster_id[cl]);
 									if ((attribute->id == ESP_ZB_ZCL_ATTR_ON_OFF_ON_OFF_ID || attribute->id == 0x4003) && attribute->data.type == ESP_ZB_ZCL_ATTR_TYPE_BOOL) {
-                                             //ESP_LOGI(TAG, "attribute"); 
-											//if(device_array[k].endpoint[j].device_t.state != *(bool *)attribute->data.value){
 
-												if(attribute->id == 0x0000){
-													device_array[k].endpoint[j].device_t.state = attribute->data.value ? *(bool *)attribute->data.value : device_array[k].endpoint[j].device_t.state;
-												}else if(attribute->id == 0x4003){
-													nuos_update_onoff_cluster(k, j, device_array[k].endpoint[j].device_t.level ? true : false);
+										if(attribute->id == 0x0000){
+											device_array[k].endpoint[j].device_t.state = attribute->data.value ? *(bool *)attribute->data.value : device_array[k].endpoint[j].device_t.state;
+										}else if(attribute->id == 0x4003){
+											nuos_update_onoff_cluster(k, j, device_array[k].endpoint[j].device_t.level);
+										}	
+
+										device_array[k].endpoint[j].dev_id = device_array[k].endpoint[j].ep;
+										uint8_t val = 0;
+									
+										if(device_array[k].endpoint[j].dev_type == 0 || device_array[k].endpoint[j].dev_type == 256){
+											if(!device_array[k].endpoint[j].device_t.state){
+												device_array[k].endpoint[j].device_t.level = 0;
+											}else {
+												device_array[k].endpoint[j].device_t.level = 255;
+											}
+										}
+										if(device_array[k].room_id == 0 || device_array[k].room_id == 255 || device_array[k].module_id == 0 || device_array[k].module_id == 255){
+											send_module_unconfigured_over_uart(device_array[k].ieee_addr);
+										}else{
+											if(get_max_endpoint_in_active_seq() == 1){
+												set_res_active_seq_response_received(false);
+												send_module_ctrl_over_uart(&device_array[k], 1, j);
+											}else{
+												if(is_res_active_seq_response_completed()){
+													set_res_active_seq_response_received(false);
+													uint8_t k = find_index();
+													send_module_ctrl_over_uart(&device_array[k], 0, 0);	
+													printf("-----------Hurray Complete!!----------\n");
 												}	
-												printf("X_ATTR:0x%04X, X_STATE:%d\n", attribute->id, device_array[k].endpoint[j].device_t.state);
+											}
 
-												uint8_t val = 0;//device_array[k].endpoint[j].device_t.level;
-											
-												if(device_array[k].endpoint[j].dev_type == 0 || device_array[k].endpoint[j].dev_type == 256){
-													if(!device_array[k].endpoint[j].device_t.state){
-														device_array[k].endpoint[j].device_t.level = 0;
-													}else {
-														device_array[k].endpoint[j].device_t.level = 255;
-													}
-												}else{
+											if(device_array[k].endpoint[j].scene_add_command_flag){
+												device_array[k].endpoint[j].scene_add_command_flag = false;
+                                                printf("group_id:%d  scene_id:%d\n", scene_nodes[scene_idx].group_id, scene_nodes[scene_idx].scene_id);
+												nuos_zb_scenes_store_scene_request(
+													scene_nodes[scene_idx].group_id, 
+													scene_nodes[scene_idx].scene_id, 1, 
+													device_array[k].endpoint[j].ep, 
+													device_array[k].short_addr);
+											}
+										}
 
-												}
-                                                printf("X_LEVEL:%d\n", device_array[k].endpoint[j].device_t.level);
-												if(lock_nvs_save){
-													lock_nvs_save = false;
-												}else{
-													save_or_update_light_bulb_device_to_nvs(&device_array[k]);
-												}
-
-												if(device_array[k].room_id == 0 || device_array[k].room_id == 255 || device_array[k].module_id == 0 || device_array[k].module_id == 255){
-													send_module_unconfigured_over_uart(device_array[k].ieee_addr);
-												}else{
-													send_module_ctrl_over_uart(&device_array[k], 1, j);
-												}
-											//}
-											break;  // edtd/r:m
+										if(lock_nvs_save){
+											lock_nvs_save = false;
+										}else{
+											save_or_update_light_bulb_device_to_nvs(&device_array[k]);
+										}										
+										break;
 									}
 								}
+							}else{
+								printf("CLUSTER_ID_2:0x%X\n", device_array[k].endpoint[j].cluster_id[cl]);
 							}
 						}
-
 		    		}
 		    	}
 		    }
@@ -358,40 +427,36 @@ static void esp_app_zb_attribute_handler(uint16_t short_addr, uint8_t end_point,
 										attribute->data.value) {
 										if(device_array[k].endpoint[j].device_t.state){
 
-											
 											uint8_t val = device_array[k].endpoint[j].device_t.level = attribute->data.value ? *(uint8_t *)attribute->data.value : device_array[k].endpoint[j].device_t.level;
-											//if(val != device_array[k].endpoint[j].device_t.level){
-												if(val == 0){
-													device_array[k].endpoint[j].device_t.state = false;
-												} else { 
-													device_array[k].endpoint[j].device_t.state = true;
-												}
+											if(val == 0){
+												device_array[k].endpoint[j].device_t.state = false;
+											} else { 
+												device_array[k].endpoint[j].device_t.state = true;
+											}
+                                            device_array[k].endpoint[j].dev_id = device_array[k].endpoint[j].ep;
 
-												if(device_array[k].endpoint[j].dev_type == 769){
-													//for dimmable light
-													if(val > 0) device_array[k].endpoint[j].device_t.level = val;
-													if(val == 191) device_array[k].endpoint[j].device_t.level = 142; 
-													else if(val == 128) device_array[k].endpoint[j].device_t.level = 102; 
-													else if(val == 64) device_array[k].endpoint[j].device_t.level = 80;
-													else if(val >= 254) device_array[k].endpoint[j].device_t.level = 255;													
-												}
+											if(device_array[k].endpoint[j].dev_type == 769){
+												//for dimmable light
+												if(val > 0) device_array[k].endpoint[j].device_t.level = val;
+												if(val == 191) device_array[k].endpoint[j].device_t.level = 142; 
+												else if(val == 128) device_array[k].endpoint[j].device_t.level = 102; 
+												else if(val == 64) device_array[k].endpoint[j].device_t.level = 80;
+												else if(val >= 254) device_array[k].endpoint[j].device_t.level = 255;													
+											}
 
-
-												printf("X_LEVEL:%d\n", device_array[k].endpoint[j].device_t.level);
-												if(lock_nvs_save){
-													lock_nvs_save = false;
-												}else{
-													save_or_update_light_bulb_device_to_nvs(&device_array[k]);
-												}
-												send_module_ctrl_over_uart(&device_array[k], 1, j);
-											//}
+											send_module_ctrl_over_uart(&device_array[k], 1, j);
+											// printf("X_LEVEL:%d\n", device_array[k].endpoint[j].device_t.level);
+											if(lock_nvs_save){
+												lock_nvs_save = false;
+											}else{
+												save_or_update_light_bulb_device_to_nvs(&device_array[k]);
+											}
 											break;
 										}
 									}
 								}
 							}
 						}
-
 		    		}
 		    	}
 		    }
@@ -408,6 +473,7 @@ static void esp_app_zb_attribute_handler(uint16_t short_addr, uint8_t end_point,
 										attribute->data.value) {
 											device_array[k].endpoint[j].device_t.value = attribute->data.value ? *(uint16_t *)attribute->data.value : device_array[k].endpoint[j].device_t.value;
 											printf("X_COLOR:%ld\n", device_array[k].endpoint[j].device_t.value);
+											device_array[k].endpoint[j].dev_id = device_array[k].endpoint[j].ep;
 											if(lock_nvs_save){
 												lock_nvs_save = false;
 											}else{
@@ -436,6 +502,7 @@ static void esp_app_zb_attribute_handler(uint16_t short_addr, uint8_t end_point,
 										attribute->data.value) {
 											device_array[k].endpoint[j].device_t.level = attribute->data.value ? *(uint16_t *)attribute->data.value : device_array[k].endpoint[j].device_t.value;
 											printf("X_FAN_SPEED:%d\n", device_array[k].endpoint[j].device_t.level);
+											device_array[k].endpoint[j].dev_id = device_array[k].endpoint[j].ep;
 											if(lock_nvs_save){
 												lock_nvs_save = false;
 											}else{
@@ -447,11 +514,28 @@ static void esp_app_zb_attribute_handler(uint16_t short_addr, uint8_t end_point,
 								}
 							}
 						}
-
 		    		}
 		    	}
 		    }
 			break;
+
+		case ESP_ZB_HA_SCENE_SELECTOR_DEVICE_ID:
+		    for(int k=0; k<devices_count; k++){
+		    	for(int j=0; j<device_array[k].ep_counts; j++){
+		    		if(short_addr == device_array[k].short_addr){
+						for(int cl=0; cl<device_array[k].endpoint[j].cluster_counts; cl++){
+							if(device_array[k].endpoint[j].cluster_id[cl] == ESP_ZB_ZCL_CLUSTER_ID_ON_OFF){
+								if(end_point == device_array[k].endpoint[j].ep){
+							        printf("ESP_ZB_HA_SCENE_SELECTOR_DEVICE_ID\n");
+								}
+							}else{
+								printf("CLUSTER_ID:0x%X\n", device_array[k].endpoint[j].cluster_id[cl]);
+							}
+						}
+		    		}
+		    	}
+		    }		
+			break;	
         case ESP_ZB_HA_CUSTOM_ATTR_DEVICE_ID:
        		printf("ESP_ZB_ZCL_CLUSTER_ID_THERMOSTAT  custom cluster attr\n");
 			//0xFC31
@@ -477,19 +561,6 @@ static void esp_app_zb_attribute_handler(uint16_t short_addr, uint8_t end_point,
 										}else{
 											send_module_ctrl_over_uart(&device_array[k], 1, 0);
 										}
-									// if (attribute->id == ESP_ZB_ZCL_ATTR_IAS_ZONE_ZONETYPE_ID &&
-									// 	attribute->data.type == ESP_ZB_ZCL_ATTR_TYPE_8BIT_ENUM &&
-									// 	attribute->data.value) {
-									// device_array[k].endpoint[j].device_t.level = attribute->data.value ? *(uint16_t *)attribute->data.value : device_array[k].endpoint[j].device_t.value;
-									// printf("SENSOR:%d\n", device_array[k].endpoint[j].device_t.level);
-									// 		if(lock_nvs_save){
-									// 			lock_nvs_save = false;
-									// 		}else{
-									// 			save_or_update_light_bulb_device_to_nvs(&device_array[k]);
-									// 		}
-									// 		//send_uart_command(&device_array[k], j, "ctrl", device_array[k].endpoint[j].device_t.level);
-									// 		break;
-									// }
 								}
 							}
 						}
@@ -519,6 +590,8 @@ static void esp_app_zb_attribute_handler(uint16_t short_addr, uint8_t end_point,
 												device_array[k].endpoint[j].device_t.state = true;
 												device_array[k].endpoint[j].device_t.level = 255;
 											}
+
+											device_array[k].endpoint[j].dev_id = device_array[k].endpoint[j].ep;
 											// if(device_array[k].endpoint[j].device_t.level <18 || device_array[k].endpoint[j].device_t.level >30){
 											// 	 //default temp
 											// 	device_array[k].endpoint[j].device_t.level = 24;
@@ -586,18 +659,18 @@ static void esp_app_zb_attribute_handler(uint16_t short_addr, uint8_t end_point,
 									if (attribute->id == ESP_ZB_ZCL_ATTR_WINDOW_COVERING_CURRENT_POSITION_LIFT_PERCENTAGE_ID &&
 										attribute->data.type == ESP_ZB_ZCL_ATTR_TYPE_U8 &&
 										attribute->data.value) {
-	// device_array[k].endpoint[j].device_t.level = attribute->data.value ? *(uint8_t *)attribute->data.value : device_array[k].endpoint[j].device_t.level;
+
 											uint8_t value = attribute->data.value ? *(uint8_t *)attribute->data.value : device_array[k].endpoint[j].device_t.value;
-											printf("PERCENT:%d %%\n", value);
+											printf("WINDOW COMMAND:%d \n", value);
 
 											if(value == 0){
-												device_array[k].endpoint[j].device_t.state = true; //open 
-												device_array[k].endpoint[j].device_t.value = 0;
+												device_array[k].endpoint[0].device_t.state = true; //open 
+												device_array[k].endpoint[0].device_t.value = 255;
 												device_array[k].endpoint[1].device_t.state = true;
 												device_array[k].endpoint[1].device_t.value = 255;
 											}else if(value == 1){
-												device_array[k].endpoint[j].device_t.state = false; //closed
-												device_array[k].endpoint[j].device_t.value = 255;
+												device_array[k].endpoint[0].device_t.state = false; //closed
+												device_array[k].endpoint[0].device_t.value = 0;
 												device_array[k].endpoint[1].device_t.state = true;
 												device_array[k].endpoint[1].device_t.value = 255;
 											}else{
@@ -615,7 +688,7 @@ static void esp_app_zb_attribute_handler(uint16_t short_addr, uint8_t end_point,
 											}else{
 												send_module_ctrl_over_uart(&device_array[k], 1, 0);
 												vTaskDelay(pdMS_TO_TICKS(100));
-												send_module_ctrl_over_uart(&device_array[k], 1, 1);
+												send_module_ctrl_over_uart(&device_array[k], 2, 1);
 											}
 											break;
 									}
@@ -639,13 +712,20 @@ static void esp_app_zb_attribute_handler(uint16_t short_addr, uint8_t end_point,
 										attribute->data.type == ESP_ZB_ZCL_ATTR_TYPE_S16 &&
 										attribute->data.value) {
 											device_array[k].endpoint[j].device_t.value = attribute->data.value ? *(uint16_t *)attribute->data.value : device_array[k].endpoint[j].device_t.value;
+											device_array[k].endpoint[j].device_t.value = device_array[k].endpoint[j].device_t.value/100;
 											printf("X_TEMP:%ld\n", device_array[k].endpoint[j].device_t.value);
 											if(lock_nvs_save){
 												lock_nvs_save = false;
 											}else{
 												save_or_update_light_bulb_device_to_nvs(&device_array[k]);
 											}
-											//send_uart_command(&device_array[k], j, "ctrl", device_array[k].endpoint[j].device_t.level);
+
+											if(device_array[k].room_id == 0 || device_array[k].room_id == 255 || device_array[k].module_id == 0 || device_array[k].module_id == 255){
+												send_module_temp_humidity_unconfigured_over_uart(device_array[k].ieee_addr);
+												
+											}else{
+												send_module_ctrl_over_uart(&device_array[k], 1, 0);
+											}
 											break;
 									}
 								}
@@ -656,7 +736,54 @@ static void esp_app_zb_attribute_handler(uint16_t short_addr, uint8_t end_point,
 		    	}
 		    }
 			break;
-			
+
+		case ESP_ZB_ZCL_CLUSTER_ID_ILLUMINANCE_MEASUREMENT:
+		    printf("ESP_ZB_ZCL_CLUSTER_ID_ILLUMINANCE_MEASUREMENT\n");
+			for(int k=0; k<devices_count; k++){
+				printf("ep_counts:%d \n", device_array[k].ep_counts);
+		    	for(int j=0; j<device_array[k].ep_counts; j++){
+					printf("short_addr:0x%02X  0x%02X\n", short_addr, device_array[k].short_addr);
+		    		if(short_addr == device_array[k].short_addr){
+						
+						printf("cluster_counts:%d \n", device_array[k].endpoint[j].cluster_counts);
+
+						for(int cl=0; cl<device_array[k].endpoint[j].cluster_counts; cl++){
+							printf("cluster_id:0x%02X \n", device_array[k].endpoint[j].cluster_id[cl]);
+							if(device_array[k].endpoint[j].cluster_id[cl] == ESP_ZB_ZCL_CLUSTER_ID_ILLUMINANCE_MEASUREMENT){
+								printf("end_point:%d, ep:%d \n", end_point, device_array[k].endpoint[j].ep);
+								if(end_point == device_array[k].endpoint[j].ep){
+ 
+									printf("attr_id:%d  attr_type:%d \n", attribute->id, attribute->data.type);
+									
+									if (attribute->id == ESP_ZB_ZCL_ATTR_ILLUMINANCE_MEASUREMENT_MEASURED_VALUE_ID &&
+										attribute->data.type == ESP_ZB_ZCL_ATTR_TYPE_U16 &&
+										attribute->data.value) {
+											device_array[k].endpoint[j].device_t.value = attribute->data.value ? *(uint16_t *)attribute->data.value : device_array[k].endpoint[j].device_t.value;
+											device_array[k].endpoint[j].device_t.value = device_array[k].endpoint[j].device_t.value/100;
+											printf("LUX_VAL:%ld\n", device_array[k].endpoint[j].device_t.value);
+											if(lock_nvs_save){
+												lock_nvs_save = false;
+											}else{
+												save_or_update_light_bulb_device_to_nvs(&device_array[k]);
+											}
+
+											if(device_array[k].room_id == 0 || device_array[k].room_id == 255 || device_array[k].module_id == 0 || device_array[k].module_id == 255){
+												send_module_lux_sensor_unconfigured_over_uart(device_array[k].ieee_addr);
+												
+											}else{
+												send_module_ctrl_over_uart(&device_array[k], 1, 0);
+											}
+											break;
+									}
+								}
+							}
+						}
+
+		    		}
+		    	}
+		    }
+			break;
+
 		case ESP_ZB_ZCL_CLUSTER_ID_REL_HUMIDITY_MEASUREMENT:
 			for(int k=0; k<devices_count; k++){
 		    	for(int j=0; j<device_array[k].ep_counts; j++){
@@ -668,13 +795,20 @@ static void esp_app_zb_attribute_handler(uint16_t short_addr, uint8_t end_point,
 										attribute->data.type == ESP_ZB_ZCL_ATTR_TYPE_U16 &&
 										attribute->data.value) {
 											device_array[k].endpoint[j].device_t.value = attribute->data.value ? *(uint16_t *)attribute->data.value : device_array[k].endpoint[j].device_t.value;
+											device_array[k].endpoint[j].device_t.value = device_array[k].endpoint[j].device_t.value / 100;
 											printf("X_HUMID:%ld\n", device_array[k].endpoint[j].device_t.value);
 											if(lock_nvs_save){
 												lock_nvs_save = false;
 											}else{
 												save_or_update_light_bulb_device_to_nvs(&device_array[k]);
 											}
-											//send_uart_command(&device_array[k], j, "ctrl", device_array[k].endpoint[j].device_t.level);
+
+											if(device_array[k].room_id == 0 || device_array[k].room_id == 255 || device_array[k].module_id == 0 || device_array[k].module_id == 255){
+												send_module_temp_humidity_unconfigured_over_uart(device_array[k].ieee_addr);
+												
+											}else{
+												send_module_ctrl_over_uart(&device_array[k], 2, 0);
+											}
 											break;
 									}
 								}
@@ -689,19 +823,98 @@ static void esp_app_zb_attribute_handler(uint16_t short_addr, uint8_t end_point,
 	}
 }
 
+
+
+
+
+
+static void esp_app_zb_attribute_report_handler_2(uint16_t short_addr, uint8_t end_point, uint16_t cluster_id, const esp_zb_zcl_attribute_t* attribute){
+	
+	switch(cluster_id){
+		case ESP_ZB_ZCL_CLUSTER_ID_ON_OFF:
+		    for(int k=0; k<devices_count; k++){
+		    	for(int j=0; j<device_array[k].ep_counts; j++){
+		    		if(short_addr == device_array[k].short_addr){
+						for(int cl=0; cl<device_array[k].endpoint[j].cluster_counts; cl++){
+							if(device_array[k].endpoint[j].cluster_id[cl] == ESP_ZB_ZCL_CLUSTER_ID_ON_OFF){
+								if(end_point == device_array[k].endpoint[j].ep){
+									if ((attribute->id == ESP_ZB_ZCL_ATTR_ON_OFF_ON_OFF_ID || attribute->id == 0x4003) && attribute->data.type == ESP_ZB_ZCL_ATTR_TYPE_BOOL) {
+										
+										device_array[k].endpoint[j].device_t.state = attribute->data.value ? *(bool *)attribute->data.value : device_array[k].endpoint[j].device_t.state;	
+										device_array[k].endpoint[j].dev_id = device_array[k].endpoint[j].ep;
+									
+										if(device_array[k].endpoint[j].dev_type == 0 || device_array[k].endpoint[j].dev_type == 256){
+											if(!device_array[k].endpoint[j].device_t.state){
+												device_array[k].endpoint[j].device_t.level = 0;
+											}else {
+												device_array[k].endpoint[j].device_t.level = 255;
+											}
+										}
+																				
+										break;
+									}
+								}
+							}
+						}
+		    		}
+		    	}
+		    }
+			break;			
+		default: break;
+	}
+}
+
+
+
+static uint8_t w_cmd_id[1] = {0};
+
+
+void nuos_send_window_covering_lift_percent(uint8_t node_i, uint8_t ep_i, uint8_t percent)
+{
+    esp_zb_zcl_window_covering_cluster_send_cmd_req_t cmd_req = {0};
+
+    cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_16_ENDP_PRESENT;
+    cmd_req.zcl_basic_cmd.dst_addr_u.addr_short =
+        device_array[node_i].short_addr;
+    cmd_req.zcl_basic_cmd.dst_endpoint =
+        device_array[node_i].endpoint[ep_i].ep;
+    cmd_req.zcl_basic_cmd.src_endpoint =
+        ESP_ZB_GATEWAY_ENDPOINT;
+
+    cmd_req.cmd_id =
+        ESP_ZB_ZCL_ATTR_WINDOW_COVERING_CURRENT_POSITION_LIFT_PERCENTAGE_ID;
+
+    cmd_req.value = &percent;
+
+    esp_zb_lock_acquire(portMAX_DELAY);
+    esp_zb_zcl_window_covering_cluster_send_cmd_req(&cmd_req);
+    esp_zb_lock_release();
+}
+
 void nuos_send_window_covering_command(uint8_t node_i, uint8_t ep_i, uint8_t command_id){
 
+    w_cmd_id[0] = command_id?100:0;
+	
 	esp_zb_zcl_window_covering_cluster_send_cmd_req_t cmd_req;
 	cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_16_ENDP_PRESENT;
 	cmd_req.zcl_basic_cmd.dst_addr_u.addr_short = device_array[node_i].short_addr;
 	cmd_req.zcl_basic_cmd.dst_endpoint = device_array[node_i].endpoint[ep_i].ep;
 	cmd_req.zcl_basic_cmd.src_endpoint = ESP_ZB_GATEWAY_ENDPOINT;
-	cmd_req.value = &command_id;
+	cmd_req.value = w_cmd_id;
 	cmd_req.cmd_id = command_id;
-
+    esp_zb_lock_acquire(portMAX_DELAY);
 	esp_zb_zcl_window_covering_cluster_send_cmd_req(&cmd_req);
-	printf("Updated window covering cluster\n");
-	
+	esp_zb_lock_release();
+
+	printf("Updated window covering cluster  command_id:%d\n", command_id);
+    lock_nvs_save = true;
+	/* 🔁 Send NVS save request to another task */
+    nvs_save_evt_t evt = {
+        .node_i = node_i
+    };
+    xQueueSend(nvs_save_queue, &evt, 0);
+
+	nuos_send_window_covering_lift_percent(node_i, 0, w_cmd_id[0]);
 }
 
 void nuos_update_curtain_cluster(uint8_t node_i, uint8_t ep_i, uint8_t curtain_state){
@@ -717,39 +930,123 @@ void nuos_update_curtain_cluster(uint8_t node_i, uint8_t ep_i, uint8_t curtain_s
 	}else{
 		device_array[node_i].endpoint[ep_i].device_t.state = true;
 	}
-	//esp_zb_lock_acquire(portMAX_DELAY);
+	esp_zb_lock_acquire(portMAX_DELAY);
 	esp_zb_zcl_on_off_cmd_req(&cmd_req);
-	//esp_zb_lock_release();
-	printf("Updated on-off cluster\n");
+	esp_zb_lock_release();
+	//printf("Updated on-off cluster\n");
     lock_nvs_save = true; 
-	save_or_update_light_bulb_device_to_nvs(&device_array[node_i]);
+	//save_or_update_light_bulb_device_to_nvs(&device_array[node_i]);
+	/* 🔁 Send NVS save request to another task */
+    nvs_save_evt_t evt = {
+        .node_i = node_i
+    };
+
+    xQueueSend(nvs_save_queue, &evt, 0);
 }
 
+void send_report(int index, uint16_t cluster_id, uint16_t attr_id, uint8_t ep_i){
+ 
+	esp_zb_zcl_report_attr_cmd_t report_cmd_2 = {
+		.zcl_basic_cmd = {
+			.dst_addr_u.addr_short = device_array[index].short_addr,
+			.dst_endpoint = device_array[index].endpoint[ep_i].ep,
+			.src_endpoint = ESP_ZB_GATEWAY_ENDPOINT,
+		},
+		.direction = ESP_ZB_ZCL_CMD_DIRECTION_TO_SRV,
+		.address_mode = ESP_ZB_APS_ADDR_MODE_16_ENDP_PRESENT,
+		.clusterID = cluster_id,
+		.attributeID = attr_id,
+	};
+	esp_zb_lock_acquire(portMAX_DELAY);
+	esp_err_t err = esp_zb_zcl_report_attr_cmd_req(&report_cmd_2);
+	esp_zb_lock_release();
+	if(err != ESP_OK){
+		ESP_LOGE(TAG, "Failed to send report command: %d", err);
+		esp_zb_lock_acquire(portMAX_DELAY);
+		err = esp_zb_zcl_report_attr_cmd_req(&report_cmd_2);
+		esp_zb_lock_release();
+		if(err != ESP_OK){
+			ESP_LOGE(TAG, "Failed to send report command again: %d", err);
+			esp_zb_lock_acquire(portMAX_DELAY);
+			err = esp_zb_zcl_report_attr_cmd_req(&report_cmd_2);
+			esp_zb_lock_release();
+		}
+	}
+}
 
-void nuos_update_onoff_cluster(uint8_t node_i, uint8_t ep_i, bool state){
+void nuos_update_scene_add_cmd(uint8_t ep_i, uint16_t short_addr, uint8_t scene_id, uint16_t group_id){
+	// Create octet string: first byte is length, then payload
+	uint8_t quad_data[4];
+	quad_data[0] = ep_i; // length byte
+	quad_data[1] = scene_id;	
+	quad_data[2] = (group_id >> 8) & 0xFF;
+	quad_data[3] = group_id & 0xFF;
+
+	esp_zb_zcl_custom_cluster_cmd_req_t cmd_req = {
+		.address_mode = ESP_ZB_APS_ADDR_MODE_16_ENDP_PRESENT,
+		.cluster_id = 0xEF00,
+		.custom_cmd_id = 0xe1,
+		.data = {
+			.value = quad_data,
+			.size = 4,
+			.type = ESP_ZB_ZCL_ATTR_TYPE_U32,
+		},
+		.direction = ESP_ZB_ZCL_CMD_DIRECTION_TO_SRV,
+		.profile_id = 0x0104,
+		.zcl_basic_cmd.dst_addr_u.addr_short = short_addr,
+		.zcl_basic_cmd.dst_endpoint = ep_i,
+		.zcl_basic_cmd.src_endpoint = ESP_ZB_GATEWAY_ENDPOINT,
+		.manuf_specific = 0,
+		.manuf_code = 0,
+		.dis_defalut_resp = 1,
+	};
+	esp_zb_zcl_custom_cluster_cmd_req(&cmd_req);
+}
+
+void nuos_update_onoff_cluster(uint8_t node_i, uint8_t ep_i, uint8_t level){
+
 	esp_zb_zcl_on_off_cmd_t cmd_req;
+	bool state = level ? true : false;
 	cmd_req.zcl_basic_cmd.dst_addr_u.addr_short = device_array[node_i].short_addr;
 	cmd_req.zcl_basic_cmd.dst_endpoint = device_array[node_i].endpoint[ep_i].ep;
 	cmd_req.zcl_basic_cmd.src_endpoint = ESP_ZB_GATEWAY_ENDPOINT;
 	cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_16_ENDP_PRESENT;
-	if(!state){
-		cmd_req.on_off_cmd_id = ESP_ZB_ZCL_CMD_ON_OFF_OFF_ID;
-		//device_array[node_i].endpoint[ep_i].device_t.level = 0;
-		device_array[node_i].endpoint[ep_i].device_t.state = false;
-	}else{
-		cmd_req.on_off_cmd_id = ESP_ZB_ZCL_CMD_ON_OFF_ON_ID;
-		//device_array[node_i].endpoint[ep_i].device_t.level = 255;
-		device_array[node_i].endpoint[ep_i].device_t.state = true;
-	}
-	
-	//esp_zb_lock_acquire(portMAX_DELAY);
-	esp_zb_zcl_on_off_cmd_req(&cmd_req);
-	//esp_zb_lock_release();
+	bool current_state = device_array[node_i].endpoint[ep_i].device_t.state;
 
-	printf("Updated on-off cluster\n");
-    lock_nvs_save = true; 
-	save_or_update_light_bulb_device_to_nvs(&device_array[node_i]);
-	
+	if(device_array[node_i].zb_app_id == ESP_ZB_HA_ON_OFF_LIGHT_DEVICE_ID){
+		if(current_state == 0) device_array[node_i].endpoint[ep_i].device_t.level = 0;
+		else device_array[node_i].endpoint[ep_i].device_t.level = level;
+	}
+	printf("device_state:%d app_state:%d\n", current_state, state);
+	if (current_state != state) {
+		cmd_req.on_off_cmd_id = state ? ESP_ZB_ZCL_CMD_ON_OFF_ON_ID : ESP_ZB_ZCL_CMD_ON_OFF_OFF_ID;
+		device_array[node_i].endpoint[ep_i].device_t.state = state;
+		
+		device_array[node_i].endpoint[ep_i].device_t.last_state = current_state;
+		device_array[node_i].endpoint[ep_i].device_t.state = state;
+
+		esp_zb_lock_acquire(portMAX_DELAY);
+		esp_zb_zcl_on_off_cmd_req(&cmd_req);
+        esp_zb_lock_release();
+		if(device_array[node_i].zb_app_id == ESP_ZB_HA_DIMMABLE_LIGHT_DEVICE_ID){
+			if(!state)  nuos_update_level_cluster(node_i, ep_i, 0);
+			else nuos_update_level_cluster(node_i, ep_i, level);
+		}
+		
+		printf("------>esp command sent for 0x%4x of ep:%d\n", device_array[node_i].short_addr, 
+			device_array[node_i].endpoint[ep_i].ep);
+		esp_zb_cmd_sent_flag = false;
+		lock_nvs_save = true; 
+		/* 🔁 Send NVS save request to another task */
+		nvs_save_evt_t evt = {
+			.node_i = node_i
+		};
+		xQueueSend(nvs_save_queue, &evt, 0);
+	}else{
+		printf("------->Sending report only!!\n");
+		send_report(node_i, ESP_ZB_ZCL_CLUSTER_ID_ON_OFF, ESP_ZB_ZCL_ATTR_ON_OFF_ON_OFF_ID, ep_i);
+		send_module_ctrl_over_uart(&device_array[node_i], 1, ep_i);		
+	}
 }
 
 void nuos_update_level_cluster(uint8_t node_i, uint8_t ep_i, uint8_t level){
@@ -762,11 +1059,16 @@ void nuos_update_level_cluster(uint8_t node_i, uint8_t ep_i, uint8_t level){
 	printf("Level to set:%d\n", device_array[node_i].endpoint[ep_i].device_t.level);
 	cmd_level.level = device_array[node_i].endpoint[ep_i].device_t.level;
 	cmd_level.transition_time = 0;
-//	esp_zb_lock_acquire(portMAX_DELAY);
+	esp_zb_lock_acquire(portMAX_DELAY);
 	esp_zb_zcl_level_move_to_level_with_onoff_cmd_req(&cmd_level);
-//	esp_zb_lock_release();
+	esp_zb_lock_release();
+	esp_zb_cmd_sent_flag = true;
     lock_nvs_save = true; 
-    save_or_update_light_bulb_device_to_nvs(&device_array[node_i]);
+	/* 🔁 Send NVS save request to another task */
+    nvs_save_evt_t evt = {
+        .node_i = node_i
+    };
+    xQueueSend(nvs_save_queue, &evt, 0);
 }
 
 
@@ -779,12 +1081,17 @@ void nuos_update_color_temperature(uint8_t node_i, uint8_t ep_i, uint16_t temp){
     cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_16_ENDP_PRESENT;  
     cmd_req.color_temperature = temp;
     cmd_req.transition_time = 0;
-    //esp_zb_lock_acquire(portMAX_DELAY);
+    esp_zb_lock_acquire(portMAX_DELAY);
     esp_zb_zcl_color_move_to_color_temperature_cmd_req(&cmd_req);
-    //esp_zb_lock_release();
+    esp_zb_lock_release();
+	esp_zb_cmd_sent_flag = true;
     lock_nvs_save = true; 
-	device_array[node_i].endpoint[ep_i].device_t.value = temp;	
-    save_or_update_light_bulb_device_to_nvs(&device_array[node_i]);	
+	device_array[node_i].endpoint[ep_i].device_t.value = temp;		
+	/* 🔁 Send NVS save request to another task */
+    nvs_save_evt_t evt = {
+        .node_i = node_i
+    };
+    xQueueSend(nvs_save_queue, &evt, 0);
 }
 
 
@@ -799,12 +1106,16 @@ void nuos_update_color_hue(uint8_t node_i, uint8_t ep_i, uint16_t hue){
 	cmd2.saturation = 254;
     //cmd2.direction = ESP_ZB_ZCL_CMD_DIRECTION_TO_SRV;
     cmd2.transition_time = 1;
-    //esp_zb_lock_acquire(portMAX_DELAY);
+    esp_zb_lock_acquire(portMAX_DELAY);
     esp_zb_zcl_color_move_to_hue_and_saturation_cmd_req(&cmd2);
-    //esp_zb_lock_release(); 
+    esp_zb_lock_release(); 
 	lock_nvs_save = true; 
 	device_array[node_i].endpoint[ep_i].device_t.value = (hue * 254) / 360;  //take nother parameetr as hue and saturation
-	save_or_update_light_bulb_device_to_nvs(&device_array[node_i]);	
+	/* 🔁 Send NVS save request to another task */
+    nvs_save_evt_t evt = {
+        .node_i = node_i
+    };
+    xQueueSend(nvs_save_queue, &evt, 0);	
 }
 
 void zigbee_cluster_fan_control_attr_update(uint8_t node_i, uint8_t ep_i, uint8_t speed)
@@ -835,7 +1146,13 @@ void zigbee_cluster_fan_control_attr_update(uint8_t node_i, uint8_t ep_i, uint8_
     // Send the Write Attribute request
     esp_zb_zcl_write_attr_cmd_req(&write_cmd);
     lock_nvs_save = true; 
-	save_or_update_light_bulb_device_to_nvs(&device_array[node_i]);	
+	//save_or_update_light_bulb_device_to_nvs(&device_array[node_i]);	
+	/* 🔁 Send NVS save request to another task */
+    nvs_save_evt_t evt = {
+        .node_i = node_i
+    };
+
+    xQueueSend(nvs_save_queue, &evt, 0);
 }
 
 void zigbee_cluster_thermostat_state_attr_update(uint8_t node_i, uint8_t ep_i, uint8_t state)
@@ -873,7 +1190,13 @@ void zigbee_cluster_thermostat_state_attr_update(uint8_t node_i, uint8_t ep_i, u
     esp_zb_zcl_write_attr_cmd_req(&write_cmd);
 
 	lock_nvs_save = true; 
-	save_or_update_light_bulb_device_to_nvs(&device_array[node_i]);	
+	//save_or_update_light_bulb_device_to_nvs(&device_array[node_i]);	
+	/* 🔁 Send NVS save request to another task */
+    nvs_save_evt_t evt = {
+        .node_i = node_i
+    };
+
+    xQueueSend(nvs_save_queue, &evt, 0);
 }
 
 void zigbee_cluster_thermostat_attr_update(uint8_t node_i, uint8_t ep_i, uint8_t temp)
@@ -921,9 +1244,16 @@ void zigbee_cluster_thermostat_attr_update(uint8_t node_i, uint8_t ep_i, uint8_t
     write_cmd.attr_field = &temp_attr;
     esp_zb_zcl_write_attr_cmd_req(&write_cmd);
 	lock_nvs_save = true; 
-	save_or_update_light_bulb_device_to_nvs(&device_array[node_i]);	
+	//save_or_update_light_bulb_device_to_nvs(&device_array[node_i]);	
+	/* 🔁 Send NVS save request to another task */
+    nvs_save_evt_t evt = {
+        .node_i = node_i
+    };
+
+    xQueueSend(nvs_save_queue, &evt, 0);
 }
 
+//////////////////////////////////////////////////
 
 void nuos_update_all_commissioned_zigbee_attribute(){
 
@@ -987,9 +1317,6 @@ typedef struct {
 } uint136_t;
 
 
-extern void nuos_zb_scenes_store_scene_request(uint16_t group_id, uint8_t scene_id, uint8_t src_ep, uint8_t dst_ep, uint16_t dst_addr_short);
-extern void nuos_zb_scene_recall_scene_request(uint16_t group_id, uint8_t scene_id, uint8_t src_ep, 
-                                        uint8_t dst_ep, uint16_t dst_addr_short, esp_zb_zcl_address_mode_t address_mode);
 
 uint8_t array_data[17] = {0,1,0,1,0,0,0,10,0,0,0,10,0,0,0,0,0};	
 uint8_t seq_num = 1;									
@@ -999,8 +1326,6 @@ static void zb_buttons_handler(switch_func_pair_t *button_func_pair)
     	if(button_func_pair->pin == gpio_touch_btn_pins[1]){
 			
             array_data[1] = seq_num++;
-			//nuos_zb_scenes_store_scene_request(10, 10, 1, 1, 0x6418);
-
             // Create octet string: first byte is length, then payload
             uint8_t octet_string[18];
             octet_string[0] = 17; // length byte
@@ -1022,14 +1347,13 @@ static void zb_buttons_handler(switch_func_pair_t *button_func_pair)
 				.zcl_basic_cmd.src_endpoint = ESP_ZB_GATEWAY_ENDPOINT,
 				.manuf_specific = 0,
 				.manuf_code=0,
-				.dis_defalut_resp = 0,
+				.dis_defalut_resp = 1,
 			};
 			esp_zb_zcl_custom_cluster_cmd_req(&cmd_req); 
     	}else if(button_func_pair->pin == gpio_touch_btn_pins[0]){
 			nuos_zb_scene_recall_scene_request(10, 10, 1, 1, 1, ESP_ZB_APS_ADDR_MODE_16_GROUP_ENDP_NOT_PRESENT);
-    	}
-    	// nuos_update_all_commissioned_zigbee_attribute();
-    }
+    	}    
+	}
 }
 
 static esp_err_t zb_attribute_reporting_handler(const esp_zb_zcl_report_attr_message_t *message)
@@ -1040,9 +1364,10 @@ static esp_err_t zb_attribute_reporting_handler(const esp_zb_zcl_report_attr_mes
     ESP_LOGI(TAG, "Received report from address(0x%x) src endpoint(%d) to dst endpoint(%d) cluster(0x%x)",
              message->src_address.u.short_addr, message->src_endpoint,
              message->dst_endpoint, message->cluster);
-
+    
     esp_app_zb_attribute_handler(message->src_address.u.short_addr, message->src_endpoint, message->cluster, &message->attribute);
-    return ESP_OK;
+
+	return ESP_OK;
 }
 
 typedef struct zdo_info_ctx_s {
@@ -1324,10 +1649,11 @@ void nuos_zb_leave_device(node_module_t * module_remove ) {
 		memcpy(leave_req.device_address, module_remove->ieee_addr, sizeof(esp_zb_ieee_addr_t));
 		leave_req.remove_children = 0;
 		leave_req.rejoin = 0;
-		esp_zb_zdo_device_leave_req(&leave_req, device_leave_callback, &module_remove->short_addr);
-		vTaskDelay(pdMS_TO_TICKS(100));
+		
 		printf("deleted_short_addr:0x%x\n", module_remove->short_addr);
 		remove_zigbee_device_from_nvs(module_remove->short_addr);
+		vTaskDelay(pdMS_TO_TICKS(100));
+		esp_zb_zdo_device_leave_req(&leave_req, device_leave_callback, &leave_req.dst_nwk_addr);
 		vTaskDelay(pdMS_TO_TICKS(100));
     	memset(device_array, 0, sizeof(device_array));
 		devices_count = 0;
@@ -1349,7 +1675,7 @@ void poll_sensor_read_attributes(uint8_t sensor_ep, uint16_t sensor_short_addr)
     temp_read.clusterID = ESP_ZB_ZCL_CLUSTER_ID_TEMP_MEASUREMENT;
     temp_read.manuf_specific = 0;
     temp_read.direction = 0; // To server
-    temp_read.dis_defalut_resp = 0;
+    temp_read.dis_defalut_resp = 1;
     temp_read.manuf_code = 0;
     uint16_t temp_attr_id = ESP_ZB_ZCL_ATTR_TEMP_MEASUREMENT_VALUE_ID;  
     temp_read.attr_field  = &temp_attr_id;
@@ -1364,7 +1690,7 @@ void poll_sensor_read_attributes(uint8_t sensor_ep, uint16_t sensor_short_addr)
     hum_read.clusterID = ESP_ZB_ZCL_CLUSTER_ID_REL_HUMIDITY_MEASUREMENT;
     hum_read.manuf_specific = 0;
     hum_read.direction = 0; // To server
-    hum_read.dis_defalut_resp = 0;
+    hum_read.dis_defalut_resp = 1;
     hum_read.manuf_code = 0;
     uint16_t hum_attr_id = ESP_ZB_ZCL_ATTR_REL_HUMIDITY_MEASUREMENT_VALUE_ID;
     hum_read.attr_field = &hum_attr_id;
@@ -1422,13 +1748,12 @@ void send_next_bind(bind_state_t* state) {
         esp_zb_get_long_address(bind_req->dst_address_u.addr_long);
         bind_req->dst_endp = ESP_ZB_GATEWAY_ENDPOINT;
 
-        ESP_LOGI(TAG, "Request temperature sensor to bind us:0x%x ep:%d", bind_req->cluster_id, devices_stt->endpoint[ep_index].ep);
+        ESP_LOGI(TAG, "Request device to bind us:0x%x ep:%d", bind_req->cluster_id, devices_stt->endpoint[ep_index].ep);
+	
         esp_zb_zdo_device_bind_req(bind_req, bind_cb, state);
 
-
-
 		///////////////////////////////////////////////////////////////////////////////
-		// // ... fill bind_req fields as before ...
+		// ... fill bind_req fields as before ...
 		if(bind_req != NULL){
 			bind_req->cluster_id = devices_stt->endpoint[ep_index].cluster_id[cl];
 			bind_req->dst_endp = devices_stt->endpoint[ep_index].ep;
@@ -1449,7 +1774,7 @@ void send_next_bind(bind_state_t* state) {
 void start_zigbee_cluster_ep_binding(node_module_t* devices_stt, int ep_index) {
     bind_state_t* state = calloc(1, sizeof(bind_state_t));
 
-	find_device_by_dev_id(devices_stt->module_id, devices_stt->endpoint[ep_index].dev_id, (uint8_t*)&state->node_index, (uint8_t*)&state->ep_index); 
+	find_device_by_dev_id(devices_stt->room_id, devices_stt->module_id, devices_stt->endpoint[ep_index].ep, (uint8_t*)&state->node_index, (uint8_t*)&state->ep_index); 
     state->devices_stt = devices_stt;
     state->ep_index = ep_index;
     state->current_cluster = 0;
@@ -1467,6 +1792,50 @@ void add_number_to_string(const char* input_str, int decimal_val, char* output_r
     // Now result contains "Scene Switch 2"
     printf("%s\n", output_result);
 }
+
+void nuos_zb_read_attributes_from_clusters(uint16_t cluster_id, uint8_t dst_ep, uint16_t short_addr){
+	
+	// uint16_t attr_list[] = {
+	// 	ESP_ZB_ZCL_ATTR_IAS_ZONE_ZONETYPE_ID,
+	// };
+
+	// esp_zb_zcl_read_attr_cmd_t read_cmd = {
+	// 	.address_mode = ESP_ZB_APS_ADDR_MODE_16_ENDP_PRESENT,
+	// 	.clusterID = cluster_id,
+	// 	.zcl_basic_cmd.src_endpoint = ESP_ZB_GATEWAY_ENDPOINT,
+	// 	.zcl_basic_cmd.dst_endpoint = dst_ep,
+	// 	.zcl_basic_cmd.dst_addr_u.addr_short = short_addr,
+	// 	.direction = ESP_ZB_ZCL_CMD_DIRECTION_TO_SRV,
+	// 	.manuf_specific = 0,
+	// 	.dis_defalut_resp = 0,
+	// 	.manuf_code = 0,
+	// 	.attr_number  = sizeof(attr_list) / sizeof(uint16_t),
+	// 	.attr_field   = attr_list,
+	// };
+
+	// esp_zb_zcl_read_attr_cmd_req(&read_cmd);
+
+
+
+
+	esp_zb_zcl_read_attr_cmd_t read_req;
+	read_req.address_mode = ESP_ZB_APS_ADDR_MODE_16_ENDP_PRESENT;
+	read_req.zcl_basic_cmd.src_endpoint = ESP_ZB_GATEWAY_ENDPOINT;
+	read_req.zcl_basic_cmd.dst_endpoint = dst_ep;
+	read_req.zcl_basic_cmd.dst_addr_u.addr_short = short_addr;
+	read_req.clusterID = cluster_id;
+
+	uint16_t attributes[] = {
+		ESP_ZB_ZCL_ATTR_IAS_ZONE_ZONETYPE_ID,
+	};
+	read_req.attr_number = ARRAY_LENTH(attributes);
+	read_req.attr_field = attributes;
+	esp_zb_zcl_read_attr_cmd_req(&read_req);
+
+	printf("esp_zb_zcl_read_attr_cmd_t\n");
+
+}
+
 
 static void simple_desc_cb(esp_zb_zdp_status_t zdo_status, esp_zb_af_simple_desc_1_1_t *simple_desc, void *user_ctx)
 {
@@ -1520,6 +1889,7 @@ static void simple_desc_cb(esp_zb_zdp_status_t zdo_status, esp_zb_af_simple_desc
 						default:break;
 					}
 					break;
+
 				case 0x010D:    
 				case 0x10C:					
 				case ESP_ZB_HA_COLOR_DIMMABLE_LIGHT_DEVICE_ID: //RGB and CCT Light
@@ -1552,10 +1922,6 @@ static void simple_desc_cb(esp_zb_zdp_status_t zdo_status, esp_zb_af_simple_desc
 							devices_stt->endpoint[ep_index].is_bind[cluster_counts] = false;
 							strcpy(devices_stt->endpoint[ep_index].dev_name, "Zigbee Config Model");
 							devices_stt->endpoint[ep_index].cluster_id[cluster_counts++] = 0xFC31;
-							// devices_stt->endpoint[2].ep = 2;
-							// devices_stt->endpoint[2].dev_id = 2;
-                            // devices_stt->endpoint[ep_index].cluster_counts = cluster_counts;
-							// devices_stt->ep_counts = 3;	
 							break;
 						default:break;
 					}
@@ -1572,30 +1938,17 @@ static void simple_desc_cb(esp_zb_zdp_status_t zdo_status, esp_zb_af_simple_desc
 							devices_stt->endpoint[ep_index].is_bind[cluster_counts] = false;
 							strcpy(devices_stt->endpoint[ep_index].dev_name, "Zigbee IR Blaster");
 							devices_stt->endpoint[ep_index].cluster_id[cluster_counts++] = ESP_ZB_ZCL_CLUSTER_ID_THERMOSTAT;
-				
-
-							// devices_stt->endpoint[ep_index].ep = 1;
-							// devices_stt->endpoint[ep_index].dev_id = 1;
-							
-                            // ep_index++; 
-							// devices_stt->endpoint[ep_index].ep = 2;
-							// devices_stt->endpoint[ep_index].dev_id = 2;
-							// devices_stt->endpoint[ep_index].dev_type = ESP_ZB_HA_THERMOSTAT_DEVICE_ID;
-
-							// devices_stt->endpoint[ep_index].is_bind[0] = false;
-							// strcpy(devices_stt->endpoint[ep_index].dev_name, "Zigbee Set State");
-							// devices_stt->endpoint[ep_index].cluster_id[0] = ESP_ZB_ZCL_CLUSTER_ID_THERMOSTAT;	
-							// devices_stt->ep_counts++;		
-							// devices_stt->endpoint[ep_index].cluster_counts = 1;		
-							// devices_stt->ep_counts = devices_stt->ep_counts - 1;	
                            
 							break;
 						default:break;
 					}
 					break;
+
 				case 0x0106: 									//Illuminance Sensor
+				    //printf("Hello --> 0x0106\n");
 					switch(*(simple_desc->app_cluster_list + i)){
 						case ESP_ZB_ZCL_CLUSTER_ID_ILLUMINANCE_MEASUREMENT:
+						    //printf("ESP_ZB_ZCL_CLUSTER_ID_ILLUMINANCE_MEASUREMENT!!\n");
 							devices_stt->endpoint[ep_index].is_bind[cluster_counts] = false;
 							devices_stt->endpoint[ep_index].cluster_id[cluster_counts++] = ESP_ZB_ZCL_CLUSTER_ID_ILLUMINANCE_MEASUREMENT;
 							strcpy(devices_stt->endpoint[ep_index].dev_name, "Zigbee Lux Sensor");
@@ -1604,6 +1957,7 @@ static void simple_desc_cb(esp_zb_zdp_status_t zdo_status, esp_zb_af_simple_desc
 						default:break;
 					}
 					break;
+
 				case ESP_ZB_HA_TEMPERATURE_SENSOR_DEVICE_ID: 	//Temperature & Humidity Sensor
 					switch(*(simple_desc->app_cluster_list + i)){
 						case ESP_ZB_ZCL_CLUSTER_ID_TEMP_MEASUREMENT:
@@ -1621,20 +1975,36 @@ static void simple_desc_cb(esp_zb_zdp_status_t zdo_status, esp_zb_af_simple_desc
 						default:break;
 					}
 					break;
+
 				case ESP_ZB_HA_IAS_ZONE_ID:  					//contact switch, motion sensor, gas leak
 					switch(*(simple_desc->app_cluster_list + i)){
 						case ESP_ZB_ZCL_CLUSTER_ID_IAS_ZONE:
 							devices_stt->endpoint[ep_index].is_bind[cluster_counts] = false;
 							strcpy(devices_stt->endpoint[ep_index].dev_name, "Zigbee IAS Sensor");
 							devices_stt->endpoint[ep_index].cluster_id[cluster_counts++] = ESP_ZB_ZCL_CLUSTER_ID_IAS_ZONE;
-							//devices_stt->endpoint[ep_index].cluster_counts = cluster_counts;
+							devices_stt->endpoint[ep_index].cluster_counts = cluster_counts;
+
+							nuos_zb_read_attributes_from_clusters(ESP_ZB_ZCL_CLUSTER_ID_IAS_ZONE, devices_stt->endpoint[ep_index].ep, devices_stt->short_addr);
+
+							ep_index++; 
+
+							devices_stt->endpoint[ep_index].ep = 2;
+							devices_stt->endpoint[ep_index].dev_id = 2;
+							devices_stt->endpoint[ep_index].dev_type = ESP_ZB_HA_CUSTOM_ATTR_DEVICE_ID;
+
+							devices_stt->endpoint[ep_index].is_bind[0] = false;
+							strcpy(devices_stt->endpoint[ep_index].dev_name, "Config Register");
+							devices_stt->endpoint[ep_index].cluster_id[0] = 0xFC31;	
+							devices_stt->ep_counts++;		
+							devices_stt->endpoint[ep_index].cluster_counts = 1;		
+							devices_stt->ep_counts = ep_index + 1;	
 							break;
 						default:break;
 					}
 					break;
 
-				case ESP_ZB_HA_ON_OFF_SWITCH_DEVICE_ID:        //OnOff Switch
-				case ESP_ZB_HA_REMOTE_CONTROL_DEVICE_ID:  //wireless remote switch (Actually running on site)	
+				case ESP_ZB_HA_ON_OFF_SWITCH_DEVICE_ID:   //OnOff Switch
+				case ESP_ZB_HA_REMOTE_CONTROL_DEVICE_ID:  //wireless remote switch	
 				case ESP_ZB_HA_SCENE_SELECTOR_DEVICE_ID:  //zigbee scene switch (Not Tested yet)
 					switch(*(simple_desc->app_cluster_list + i)){
 						case ESP_ZB_ZCL_CLUSTER_ID_ON_OFF:
@@ -1657,33 +2027,20 @@ static void simple_desc_cb(esp_zb_zdp_status_t zdo_status, esp_zb_af_simple_desc
 						default: break;
 					}
 					break;
+
 				case ESP_ZB_HA_HEATING_COOLING_UNIT_DEVICE_ID:  //zigbee scene switch (Not Tested yet)
 					switch(*(simple_desc->app_cluster_list + i)){
 						case ESP_ZB_ZCL_CLUSTER_ID_THERMOSTAT:
 						devices_stt->endpoint[ep_index].is_bind[cluster_counts] = false;
 						strcpy(devices_stt->endpoint[ep_index].dev_name, "Zigbee IR Blaster");
 						devices_stt->endpoint[ep_index].cluster_id[cluster_counts++] = ESP_ZB_ZCL_CLUSTER_ID_THERMOSTAT;
-                        // devices_stt->endpoint[0].cluster_counts = 1;
 
-						// devices_stt->endpoint[0].ep = 1;
-						// devices_stt->endpoint[0].dev_id = 1;
-
-						// ep_index++; 
-	                    // devices_stt->endpoint[ep_index].ep = 2;
-						// devices_stt->endpoint[ep_index].dev_id = 2;
-						// devices_stt->endpoint[ep_index].dev_type = ESP_ZB_HA_THERMOSTAT_DEVICE_ID;
-
-						// devices_stt->endpoint[ep_index].is_bind[0] = false;
-						// strcpy(devices_stt->endpoint[ep_index].dev_name, "Zigbee Set State");
-						// devices_stt->endpoint[ep_index].cluster_id[0] = ESP_ZB_ZCL_CLUSTER_ID_THERMOSTAT;	
-						// devices_stt->ep_counts++;		
-						// devices_stt->endpoint[ep_index].cluster_counts = 1;		
-						// devices_stt->ep_counts = 2;	
 
 						break;
 						default:break;
 					}
 					break;
+
 				case ESP_ZB_HA_WINDOW_COVERING_DEVICE_ID:
 					switch(*(simple_desc->app_cluster_list + i)){
 						case ESP_ZB_ZCL_CLUSTER_ID_WINDOW_COVERING:
@@ -1698,7 +2055,7 @@ static void simple_desc_cb(esp_zb_zdp_status_t zdo_status, esp_zb_af_simple_desc
 						devices_stt->endpoint[ep_index].dev_type = ESP_ZB_HA_WINDOW_COVERING_DEVICE_ID;
 
 						devices_stt->endpoint[ep_index].is_bind[0] = false;
-						strcpy(devices_stt->endpoint[ep_index].dev_name, "Zigbee Curtain Switch");
+						strcpy(devices_stt->endpoint[ep_index].dev_name, "Zigbee Curtain Stop");
 						devices_stt->endpoint[ep_index].cluster_id[0] = ESP_ZB_ZCL_CLUSTER_ID_WINDOW_COVERING;	
 						devices_stt->ep_counts++;		
 						devices_stt->endpoint[ep_index].cluster_counts = 1;		
@@ -1710,6 +2067,7 @@ static void simple_desc_cb(esp_zb_zdp_status_t zdo_status, esp_zb_af_simple_desc
 				default:break;
             }
         }
+		devices_stt->endpoint[ep_index].dev_type = simple_desc->app_device_id;
 		devices_stt->endpoint[ep_index].cluster_counts = cluster_counts;
         printf("desc==>devices_stt->short_addr:0x%4x ep_counts:%d dev_type:%d\n", 
 			devices_stt->short_addr, 
@@ -1723,7 +2081,7 @@ static void simple_desc_cb(esp_zb_zdp_status_t zdo_status, esp_zb_af_simple_desc
         if(devices_stt->ep_counts >= 1){
 			printf("ep_index: %d  %d\n", ep_index, devices_stt->ep_counts-1);
 			if(ep_index >= devices_stt->ep_counts-1){
-				// printf("FINISHED TASK\n");
+				printf("ep_index >= devices_stt->ep_counts-1\n");
 				// printf("short_addr:%d\n", devices_stt->short_addr);
 
 				strcpy(devices_stt->manuf_name, "manuf_name");
@@ -1733,12 +2091,12 @@ static void simple_desc_cb(esp_zb_zdp_status_t zdo_status, esp_zb_af_simple_desc
 				devices_stt->room_id = 255;
 				devices_stt->module_id = 255;
 
-				send_module_motion_sensor_unconfigured_over_uart(devices_stt->ieee_addr);
+				//send_module_motion_sensor_unconfigured_over_uart(devices_stt->ieee_addr);
 
 				vTaskDelay(pdMS_TO_TICKS(1));
-				int16_t is_already_exists = find_module_index_by_ieee(devices_stt->ieee_addr);
-				if(is_already_exists == -1){
-					printf("Device already exists in NVS with module_id:%d\n", devices_stt->module_id);
+				int16_t is_index = find_module_index_by_ieee(devices_stt->ieee_addr);
+				if(is_index == -1){
+					printf("Device NOT found in NVS with module_id:%d\n", devices_stt->module_id);
 					if(save_or_update_light_bulb_device_to_nvs(devices_stt) == ESP_OK){
 						memset(device_array, 0, sizeof(device_array));
 						devices_count = 0;
@@ -1746,6 +2104,15 @@ static void simple_desc_cb(esp_zb_zdp_status_t zdo_status, esp_zb_af_simple_desc
 					}
 					printf("After save to NVS devices_count:%d\n", devices_count);	
 					remove_duplicate_devices();				
+				}else{
+					printf("Device already exists in NVS with module_id:%d\n", devices_stt->module_id);
+					if(save_or_update_light_bulb_device_to_nvs(devices_stt) == ESP_OK){
+						memset(device_array, 0, sizeof(device_array));
+						devices_count = 0;
+						read_all_devices_from_nvs(NULL);
+					}
+					printf("After save to NVS devices_count:%d\n", devices_count);	
+					remove_duplicate_devices();
 				}
 
 				
@@ -1826,7 +2193,7 @@ static void ep_cb_broadcast(esp_zb_zdp_status_t zdo_status, uint8_t ep_count, ui
 		node_module_t* n_module = ((node_module_t*)user_ctx);
     	uint16_t short_addr = n_module->short_addr;
 		n_module->is_active = true;
-        ESP_LOGW(TAG, "Active endpoint response: status(%d) short_addr(0x%x) endpoint count(%d)", zdo_status, short_addr, ep_count);
+        //ESP_LOGW(TAG, "Active endpoint response: status(%d) short_addr(0x%x) endpoint count(%d)", zdo_status, short_addr, ep_count);
 
 		// node_module_t * module = find_device_by_short_addr(short_addr);
 		// if(module != NULL){
@@ -1847,9 +2214,11 @@ void find_zigbee_nodes_task(void* args) {
 			esp_zb_zdo_active_ep_req_param_t active_ep_req;
 			active_ep_req.addr_of_interest = device_array[k].short_addr;
 			device_array[k].is_active = false;
-			esp_zb_lock_acquire(portMAX_DELAY);
-			esp_zb_zdo_active_ep_req(&active_ep_req, ep_cb_broadcast, (node_module_t*)&device_array[k]);
-			esp_zb_lock_release();
+			if(device_array[k].room_id != 255){
+				esp_zb_lock_acquire(portMAX_DELAY);
+				esp_zb_zdo_active_ep_req(&active_ep_req, ep_cb_broadcast, (node_module_t*)&device_array[k]);
+				esp_zb_lock_release();
+			}
 			vTaskDelay(pdMS_TO_TICKS(100));
 	    }
 		vTaskDelay(pdMS_TO_TICKS(60000));
@@ -1872,9 +2241,9 @@ static void ep_cb(esp_zb_zdp_status_t zdo_status, uint8_t ep_count, uint8_t *ep_
         		devices_stt->endpoint[i].ep = ep_id_list[i];
         		devices_stt->ep_counts++;
         		//devices_stt->node_leave_info.is_bind[i] = false;
-				if(devices_stt->endpoint[i].dev_id == 0){
-					devices_stt->endpoint[i].dev_id = i+1;//devices_stt->endpoint[i].ep;//++total_ep_counts;
-				}
+				// if(devices_stt->endpoint[i].dev_id == 0){
+				// 	devices_stt->endpoint[i].dev_id = i+1;
+				// }
         	}
         }
 
@@ -1897,11 +2266,12 @@ static void user_find_cb(esp_zb_zdp_status_t zdo_status, uint16_t addr, uint8_t 
         ESP_LOGI(TAG, "Match desc response: status(%d), address(0x%x), endpoint(%d)", zdo_status, addr, endpoint);
         /* save into remote device record structure for future use */
         device_k.endpoint[0].ep = endpoint;
+		device_k.endpoint[1].ep = endpoint+1;
+		device_k.endpoint[2].ep = endpoint+2;
+		device_k.endpoint[3].ep = endpoint+3;
+
         device_k.short_addr = addr;
 		/* get the light ieee address */
-
-
-
 		esp_zb_zdo_ieee_addr_req_param_t ieee_req;
 		ieee_req.addr_of_interest = device_k.short_addr;
 		ieee_req.dst_nwk_addr = device_k.short_addr;
@@ -2007,6 +2377,52 @@ void delete_door_open_detection_timer(){
 static bool motion_sensor_one_time_enrollment_flag = false;
 uint32_t current_time = 0;
 
+
+static esp_err_t zb_custom_cluster_cmd_cb_handler(esp_zb_zcl_custom_cluster_command_message_t * message){
+	esp_err_t ret = ESP_OK;
+
+    ESP_RETURN_ON_FALSE(message, ESP_FAIL, TAG, "Empty message");
+    ESP_RETURN_ON_FALSE(message->info.status == ESP_ZB_ZCL_STATUS_SUCCESS, ESP_ERR_INVALID_ARG, TAG, "Received message: error status(%d)",
+                        message->info.status);
+	ESP_LOGI(TAG, "zb_command_report_response_handler: endpoint(%d), cluster(0x%x)", message->info.dst_endpoint, message->info.cluster);					
+    ESP_LOGI(TAG, "zb_command_report_response_handler: command(%d), dst_ep(0x%x)", message->info.command.id, message->info.dst_endpoint);
+    
+	if(message->info.command.id == 0xFD){
+		if(message->info.cluster == 0xE000 || message->info.cluster == 0x0006){
+			printf("short_addr: 0x%04X", message->info.src_address.u.short_addr);
+			printf("\n\n");
+			int16_t index = find_node_index_by_short_addr(message->info.src_address.u.short_addr);
+			printf("index:%d   data_size:%d\n", index, message->data.size);
+
+
+			if(index != -1){
+				//device_array[index].endpoint[message->info.dst_endpoint-1].device_t.level = message->data.value;
+				//device_array[index].endpoint[message->info.dst_endpoint-1].device_t.state = true;
+
+				uint8_t _data = *(uint8_t *)message->data.value;
+				printf("Attribute value (uint8): %u\n", _data);
+                for(int k=0; k<device_array[index].ep_counts; k++){
+					if(_data == k){
+						device_array[index].endpoint[k].device_t.state = true;
+						if(device_array[index].room_id == 0 || device_array[index].room_id == 255 || device_array[index].module_id == 0 || device_array[index].module_id == 255){
+							send_module_scene_unconfigured_over_uart(device_array[index].ieee_addr);
+						}else{
+							device_array[index].endpoint[k].device_t.value = 255;
+							send_module_ctrl_over_uart(&device_array[index], 1, k);
+						}
+					}else{
+						device_array[index].endpoint[k].device_t.value = 0;
+						device_array[index].endpoint[k].device_t.state = false;
+					}
+				}
+				
+			}
+
+		}
+	}
+	return ret;
+}
+
 static esp_err_t zb_command_report_response_handler(const esp_zb_zcl_cmd_config_report_resp_message_t *message){
 	esp_err_t ret = ESP_OK;
 
@@ -2024,8 +2440,15 @@ static esp_err_t zb_default_response_cb_handler(const esp_zb_zcl_cmd_default_res
     ESP_RETURN_ON_FALSE(message, ESP_FAIL, TAG, "Empty message");
     ESP_RETURN_ON_FALSE(message->info.status == ESP_ZB_ZCL_STATUS_SUCCESS, ESP_ERR_INVALID_ARG, TAG, "Received message: error status(%d)",
                         message->info.status);
+						
+    						
     ESP_LOGI(TAG, "zb_default_response_cb_handler: endpoint(%d), cluster(0x%x)", message->info.dst_endpoint, message->info.cluster);
-    return ret;
+
+	// printf("CMD id:%d\n", message->info.command.id);
+	if(message->info.cluster == 0x06){	
+		call_on_attribute_handler_callback();
+	}  
+	return ret;
 }
 
 static esp_err_t zb_write_attr_response_cb_handler(esp_zb_zcl_cmd_write_attr_resp_message_t * message){
@@ -2037,15 +2460,6 @@ esp_err_t ret = ESP_OK;
     ESP_LOGI(TAG, "zb_write_attr_response_cb_handler: endpoint(%d), cluster(0x%x)", message->info.dst_endpoint, message->info.cluster);
     return ret;	
 }
-
-// void print_ieee_addr(const esp_zb_ieee_addr_t ieee_addr)
-// {
-//     ESP_LOGI(TAG,
-//         "IEEE Address: %02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X",
-//         ieee_addr[7], ieee_addr[6], ieee_addr[5], ieee_addr[4],
-//         ieee_addr[3], ieee_addr[2], ieee_addr[1], ieee_addr[0]);
-// }
-
 
 static esp_err_t zb_ias_zone_attribute_handler(const esp_zb_zcl_ias_zone_status_change_notification_message_t *message){
 	esp_err_t ret = ESP_OK;
@@ -2075,15 +2489,15 @@ static esp_err_t zb_ias_zone_attribute_handler(const esp_zb_zcl_ias_zone_status_
 						device_array[index].endpoint[message->info.dst_endpoint-1].device_t.state = true;
 					}
 					// switch ON Button
-					uint32_t press_duration = (esp_timer_get_time() / 1000) - current_time;
+					// uint32_t press_duration = (esp_timer_get_time() / 1000) - current_time;
 					//after immediate door open, check PIR input after 2 second
-                    if (press_duration > 2000) { //in ms
-                    	printf("Turn ON Light Detected!!\n");
-    					if(start_getting_motion_detetced_flag){
-    						start_getting_motion_detetced_flag = false;
-    						turn_on_light_switch();
-    					}
-                    }
+                    // if (press_duration > 2000) { //in ms
+                    // 	printf("Turn ON Light Detected!!\n");
+    				// 	if(start_getting_motion_detetced_flag){
+    				// 		start_getting_motion_detetced_flag = false;
+    				// 		turn_on_light_switch();
+    				// 	}
+                    // }
 				}else{
 					printf("Motion Sensor Idle!!\n");
 					if(index != -1){
@@ -2140,7 +2554,14 @@ static esp_err_t zb_ias_zone_attribute_handler(const esp_zb_zcl_ias_zone_status_
 
 		
 		if(index != -1){
-            send_module_ctrl_over_uart(&device_array[index], 1, message->info.dst_endpoint-1);
+
+			if(device_array[index].room_id == 0 || device_array[index].room_id == 255 || device_array[index].module_id == 0 || device_array[index].module_id == 255){
+				send_module_motion_sensor_unconfigured_over_uart(device_array[index].ieee_addr);
+				//send_module_remove_motion_sensor_on_uart(device_array[index].room_id, device_array[index].module_id, device_array[index].ieee_addr);
+			}else{
+				send_module_ctrl_over_uart(&device_array[index], 1, message->info.dst_endpoint-1);
+			}
+            
 		}
 
 	}
@@ -2369,9 +2790,12 @@ static esp_err_t zb_action_handler(esp_zb_core_action_callback_id_t callback_id,
 		break;
 	case ESP_ZB_CORE_CMD_PRIVILEGE_COMMAND_REQ_CB_ID:
 		ret = zb_cmd_privilege_command_handler(message);
-		break;  		
+		break;  	
+	case ESP_ZB_CORE_CMD_CUSTOM_CLUSTER_REQ_CB_ID:
+		ret = zb_custom_cluster_cmd_cb_handler((esp_zb_zcl_custom_cluster_command_message_t *) message);
+		break;
     default:
-        //ESP_LOGW(TAG, "Receive Zigbee action(0x%x) callback", callback_id);
+        ESP_LOGW(TAG, "Receive Zigbee action(0x%x) callback", callback_id);
         break;
     }
     return ret;
@@ -2467,6 +2891,8 @@ void read_device_info(){
 	memset(device_array, 0, sizeof(device_array));
 	devices_count = 0;
 	
+	//clear_scene_nodes_nvs();
+
 	read_all_devices_from_nvs(NULL);
 	vTaskDelay(pdMS_TO_TICKS(100));
 
@@ -2474,12 +2900,16 @@ void read_device_info(){
 
 	remove_duplicate_devices();		
 
-	for(int k=0; k<devices_count; k++){
-		for(int j=0; j<device_array[k].ep_counts; j++){
-			start_zigbee_cluster_ep_binding(&device_array[k], j);
-		}
-	}
+	// for(int k=0; k<devices_count; k++){
+	// 	if(device_array[k].room_id != 255){
+	// 		for(int j=0; j<device_array[k].ep_counts; j++){
+	// 			start_zigbee_cluster_ep_binding(&device_array[k], j);
+	// 		}
+	// 	}
+	// }
 	print_devices_compact();
+
+	load_scene_nodes();
 	vTaskDelay(pdMS_TO_TICKS(100));
 }
 
@@ -2626,6 +3056,8 @@ static void bdb_start_top_level_commissioning_cb(uint8_t mode_mask) {
     esp_zb_bdb_start_top_level_commissioning(mode_mask);
 }
 
+
+
 void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct) {
     uint32_t *p_sg_p       = signal_struct->p_app_signal;
     esp_err_t err_status = signal_struct->esp_err_status;
@@ -2665,7 +3097,7 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct) {
 					esp_zb_bdb_open_network(ZIGBEE_NW_REMAIN_OPEN_IN_SECS);
 					read_device_info();
 					
-					xTaskCreate(find_zigbee_nodes_task, "find_node_task", 4096, NULL, 8, NULL);
+					xTaskCreate(find_zigbee_nodes_task, "find_node_task", 4096, NULL, TASK_PRIORITY_ZB_FIND_NODES, NULL);
 				}
 			} else {
 				ESP_LOGE(TAG, "Failed to initialize Zigbee stack (status: %s)", esp_err_to_name(err_status));
@@ -2763,7 +3195,9 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct) {
 			esp_zb_zdo_signal_leave_indication_params_t *leave_params = (esp_zb_zdo_signal_leave_indication_params_t *)esp_zb_app_signal_get_params(p_sg_p);
 			ESP_LOGI(TAG, "leave_type-> rejoin:%d short_addr:0x%x", leave_params->rejoin, leave_params->short_addr);
 
-			uint8_t node_index = find_node_index_by_short_addr(leave_params->short_addr);
+	
+			//uint8_t node_index = find_node_index_by_short_addr(leave_params->short_addr);
+			uint8_t node_index = find_node_index_by_ieee_addr(leave_params->device_addr);
 			if(node_index == -1){
 				ESP_LOGI(TAG, "Device with short address 0x%04hx not found in device array", leave_params->short_addr);
 				break;
@@ -2785,7 +3219,8 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct) {
 			if(device_left_flag){
 				device_left_flag = false;
 				ESP_LOGI(TAG, "device_left-> short_addr:0x%x", update_params->short_addr);
-				uint8_t node_index = find_node_index_by_short_addr(update_params->short_addr);
+				//uint8_t node_index = find_node_index_by_short_addr(update_params->short_addr);
+				uint8_t node_index = find_node_index_by_ieee_addr(update_params->long_addr);
 				if(node_index == -1){
 					ESP_LOGI(TAG, "Device with short address 0x%04hx not found in device array", leave_params->short_addr);
 					break;
@@ -2962,19 +3397,20 @@ static void zb_zcl_custom_cluster_write_attr_handler(uint8_t endpoint, uint16_t 
 
 
 
-static uint8_t custom_payload = 0x01;   // MUST be static or heap
+static uint8_t custom_payload[2] = {0};   // MUST be static or heap
 
-void write_custom_cluster_attr(uint16_t cluster_id, uint16_t dst_short_addr, uint8_t dst_ep, uint8_t custom_value)
+void write_custom_cluster_attr(uint16_t cluster_id, uint8_t custom_cmd_id, uint16_t dst_short_addr, uint8_t dst_ep, uint8_t custom_value)
 {
     esp_zb_zcl_custom_cluster_cmd_req_t cmd_req = {0};
 
-	custom_payload = custom_value;
+	custom_payload[0] = custom_cmd_id;
+	custom_payload[1] = custom_value;
 
     cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_16_ENDP_PRESENT;
-    cmd_req.cluster_id   = 0xFC31;
+    cmd_req.cluster_id   = cluster_id;
     cmd_req.profile_id   = ESP_ZB_AF_HA_PROFILE_ID;
 
-    cmd_req.custom_cmd_id = 0x00;   // your custom command ID
+    cmd_req.custom_cmd_id = 0;   // your custom command ID
     cmd_req.direction     = ESP_ZB_ZCL_CMD_DIRECTION_TO_SRV;
 
     cmd_req.zcl_basic_cmd.dst_addr_u.addr_short = dst_short_addr;
@@ -2987,96 +3423,40 @@ void write_custom_cluster_attr(uint16_t cluster_id, uint16_t dst_short_addr, uin
     cmd_req.dis_defalut_resp = 1;
 
     /* RAW payload */
-	cmd_req.data.type = ESP_ZB_ZCL_ATTR_TYPE_U8;
+	cmd_req.data.type = ESP_ZB_ZCL_ATTR_TYPE_U16;
     cmd_req.data.value = &custom_payload;
-    cmd_req.data.size  = 1;
+    cmd_req.data.size  = 2;
 
     esp_zb_zcl_custom_cluster_cmd_req(&cmd_req);
 
 }
 
-// void write_custom_cluster_attr(uint16_t cluster_id, uint16_t dst_short_addr, uint8_t dst_ep, uint8_t custom_value){
-// 	#define CUSTOM_COMMAND_REQ 0x0000
-// 	if(cluster_id == 0xFC31){ // Tuya custom cluster
-// 		ESP_LOGI(TAG, "Writing NUOS custom cluster:0x%04X, addr:0x%04X, attribute:0x0000 of ep:%d", cluster_id, dst_short_addr, dst_ep);
-
-// 			esp_zb_zcl_custom_cluster_cmd_req_t cmd_req = {
-// 				.address_mode = ESP_ZB_APS_ADDR_MODE_16_ENDP_PRESENT,
-// 				.cluster_id = 0xFC31,
-// 				.custom_cmd_id = 0,
-// 				.data = {
-// 					.value = &custom_value,
-// 					.size = 1,
-// 					.type = ESP_ZB_ZCL_ATTR_TYPE_U8,
-// 				},
-// 				.direction = ESP_ZB_ZCL_CMD_DIRECTION_TO_SRV,
-// 				.profile_id = 0x0104,
-// 				.zcl_basic_cmd.dst_addr_u.addr_short = dst_short_addr,
-// 				.zcl_basic_cmd.dst_endpoint = dst_ep,
-// 				.zcl_basic_cmd.src_endpoint = ESP_ZB_GATEWAY_ENDPOINT,
-// 				.manuf_specific = 0,
-// 				.manuf_code=0,
-// 				.dis_defalut_resp = 0,
-// 			};
-// 			esp_zb_zcl_custom_cluster_cmd_req(&cmd_req); 
-
-//     // esp_zb_zcl_write_attr_cmd_t write_cmd = {0};
-
-//     // write_cmd.zcl_basic_cmd.dst_addr_u.addr_short = dst_short_addr;
-//     // write_cmd.zcl_basic_cmd.dst_endpoint = 3;
-//     // write_cmd.zcl_basic_cmd.src_endpoint = 1;
-//     // write_cmd.clusterID = 0xFC31;
-//     // //write_cmd.profile_id = ESP_ZB_AF_HA_PROFILE_ID;
-//     // write_cmd.address_mode = ESP_ZB_APS_ADDR_MODE_16_ENDP_PRESENT;
-//     // write_cmd.direction = ESP_ZB_ZCL_CMD_DIRECTION_TO_CLI;
-//     // write_cmd.manuf_specific = false;
-// 	// write_cmd.manuf_code = 0;
-
-//     // esp_zb_zcl_attribute_t attr_fields;
-// 	// attr_fields.id = 0; // Fan Mode attribute ID
-//     // attr_fields.data.type = ESP_ZB_ZCL_ATTR_TYPE_U8;  // 8-bit enum type
-//     // attr_fields.data.size = sizeof(uint8_t);             // Size of a single byte (8-bit enum)
-//     // attr_fields.data.value = &custom_value;     
-
-// 	// write_cmd.attr_number = 1;
-//     // write_cmd.attr_field = &attr_fields;
-//     // esp_zb_zcl_write_attr_cmd_req(&write_cmd);
 
 
+esp_zb_attribute_list_t* nuos_zb_create_group_cluster(){
+    //esp_zb_attribute_list_t *esp_zb_groups_cluster =  esp_zb_groups_cluster_create(NULL);
+    esp_zb_groups_cluster_cfg_t group_cfg = {
+        .groups_name_support_id = ESP_ZB_ZCL_GROUPS_NAME_SUPPORT_DEFAULT_VALUE
+    };
+    esp_zb_attribute_list_t *esp_zb_groups_cluster =  esp_zb_groups_cluster_create(&group_cfg);
+    return esp_zb_groups_cluster;
+}
 
-//     //         esp_err_t _status = esp_zb_zcl_set_attribute_val(
-//     //             dst_ep,
-//     //             0xFC31,
-//     //             ESP_ZB_ZCL_CLUSTER_SERVER_ROLE,
-//     //             0x0000,
-//     //             (uint8_t*)&custom_value,
-//     //             false
-//     //         );
-
-//     // esp_zb_zcl_report_attr_cmd_t report_cmd_2 = {
-//     //     .zcl_basic_cmd = {
-//     //         .dst_addr_u.addr_short = 0x0000,
-//     //         .dst_endpoint = dst_ep,
-//     //         .src_endpoint = ESP_ZB_GATEWAY_ENDPOINT,
-//     //     },
-
-//     //         .direction = ESP_ZB_ZCL_CMD_DIRECTION_TO_CLI,
-
-        
-//     //     .address_mode = ESP_ZB_APS_ADDR_MODE_16_ENDP_PRESENT,
-//     //     .clusterID = cluster_id,
-//     //     .attributeID = 0x0000,
-//     // };
-
-//     // //esp_zb_lock_acquire(portMAX_DELAY);
-//     // esp_zb_zcl_report_attr_cmd_req(&report_cmd_2);
-//     // //esp_zb_lock_release();
-
-
-     
-// 		ESP_EARLY_LOGI(TAG, "Send %s to custom device", custom_value);
-// 	}
-// }
+esp_zb_attribute_list_t* nuos_zb_create_scene_cluster(){
+    /* scenes cluster create with standard cluster + customized */
+    //
+    // #if(USE_NUOS_ZB_DEVICE_TYPE == DEVICE_1CH_CURTAIN)
+	esp_zb_scenes_cluster_cfg_t scene_cfg =
+	{
+		.scenes_count = 0,
+		.current_scene = ESP_ZB_ZCL_SCENES_CURRENT_SCENE_DEFAULT_VALUE,
+		.current_group = ESP_ZB_ZCL_SCENES_CURRENT_GROUP_DEFAULT_VALUE,
+		.scene_valid = ESP_ZB_ZCL_SCENES_SCENE_VALID_DEFAULT_VALUE,
+		.name_support = ESP_ZB_ZCL_SCENES_NAME_SUPPORT_DEFAULT_VALUE,
+	};
+    esp_zb_attribute_list_t *esp_zb_scene_cluster = esp_zb_scenes_cluster_create(&scene_cfg);
+    return esp_zb_scene_cluster;
+}
 
 
 static void esp_zb_task(void *pvParameters)
@@ -3085,12 +3465,19 @@ static void esp_zb_task(void *pvParameters)
     esp_radio_spinel_register_rcp_failure_handler(rcp_error_handler, ESP_RADIO_SPINEL_ZIGBEE);
 #endif
     esp_zb_overall_network_size_set(MAX_CHILDREN);
+	const uint16_t table_size = MAX_CHILDREN;
+    ESP_ERROR_CHECK(esp_zb_aps_src_binding_table_size_set(table_size));
+    ESP_ERROR_CHECK(esp_zb_aps_dst_binding_table_size_set(table_size));
+	esp_zb_nwk_set_max_children(table_size);
     /* initialize Zigbee stack */
     esp_zb_cfg_t zb_nwk_cfg = ESP_ZB_ZC_CONFIG();
     esp_zb_init(&zb_nwk_cfg);
+	
 #if CONFIG_OPENTHREAD_SPINEL_ONLY
     ESP_ERROR_CHECK(check_ot_rcp_version());
 #endif
+
+	//ESP_ERROR_CHECK(esp_zb_zcl_scenes_table_set_size(table_size));
     esp_zb_set_primary_network_channel_set(ESP_ZB_PRIMARY_CHANNEL_MASK);
 
     esp_zb_ep_list_t *ep_list = esp_zb_ep_list_create();
@@ -3111,21 +3498,43 @@ static void esp_zb_task(void *pvParameters)
 	esp_zb_attribute_list_t *esp_zb_on_off_server_cluster = esp_zb_on_off_cluster_create(NULL);
 	esp_zb_cluster_list_add_on_off_cluster(cluster_list, esp_zb_on_off_server_cluster, ESP_ZB_ZCL_CLUSTER_CLIENT_ROLE);
 
+    uint8_t value = 0;
+	// esp_zb_attribute_list_t *esp_zb_on_off_server_cluster_1 = esp_zb_on_off_cluster_create(NULL);
+	// esp_zb_attribute_list_t *esp_zb_on_off_server_cluster_1 = esp_zb_zcl_attr_list_create(ESP_ZB_ZCL_CLUSTER_ID_ON_OFF);
+	// esp_zb_cluster_add_attr(esp_zb_on_off_server_cluster_1, ESP_ZB_ZCL_CLUSTER_ID_ON_OFF, 0xFD00,
+	// 							ESP_ZB_ZCL_ATTR_TYPE_8BIT_ENUM, ESP_ZB_ZCL_ATTR_ACCESS_READ_WRITE | ESP_ZB_ZCL_ATTR_ACCESS_REPORTING, &value);
+	// esp_zb_cluster_list_add_on_off_cluster(cluster_list, esp_zb_on_off_server_cluster_1, ESP_ZB_ZCL_CLUSTER_SERVER_ROLE);
+
     esp_zb_attribute_list_t *esp_zb_tuya_private_cluster = esp_zb_zcl_attr_list_create(0xEF00);
 	esp_zb_cluster_list_add_custom_cluster(cluster_list, esp_zb_tuya_private_cluster, ESP_ZB_ZCL_CLUSTER_SERVER_ROLE); 
 
+    esp_zb_attribute_list_t *esp_zb_tuya_private_cluster_1 = esp_zb_zcl_attr_list_create(0xE000);
+	// esp_zb_cluster_add_attr(esp_zb_tuya_private_cluster_1, 0xE000, 0xFD00,
+	// 							ESP_ZB_ZCL_ATTR_TYPE_8BIT_ENUM, ESP_ZB_ZCL_ATTR_ACCESS_READ_WRITE | ESP_ZB_ZCL_ATTR_ACCESS_REPORTING, &value);
+	esp_zb_cluster_list_add_custom_cluster(cluster_list, esp_zb_tuya_private_cluster_1, ESP_ZB_ZCL_CLUSTER_CLIENT_ROLE); 
+
 	uint8_t ss = 0;
     esp_zb_attribute_list_t *esp_zb_tuya_private_cluster2 = esp_zb_zcl_attr_list_create(0xFC31);
-	//esp_zb_custom_cluster_add_custom_attr(esp_zb_tuya_private_cluster, 0x0000, ESP_ZB_ZCL_ATTR_TYPE_U8, ESP_ZB_ZCL_ATTR_ACCESS_READ_WRITE | ESP_ZB_ZCL_ATTR_ACCESS_REPORTING, &ss);
 	esp_zb_cluster_list_add_custom_cluster(cluster_list, esp_zb_tuya_private_cluster2, ESP_ZB_ZCL_CLUSTER_CLIENT_ROLE);
+
+	esp_zb_attribute_list_t *ias_zone_cfg = esp_zb_ias_zone_cluster_create(NULL);
+    esp_zb_cluster_list_add_ias_zone_cluster(cluster_list, ias_zone_cfg, ESP_ZB_ZCL_CLUSTER_SERVER_ROLE);
 
 	esp_zb_attribute_list_t *temp_cluser = esp_zb_temperature_meas_cluster_create(NULL);
 	esp_zb_attribute_list_t *humidity_cluser = esp_zb_humidity_meas_cluster_create(NULL);
 	esp_zb_cluster_list_add_temperature_meas_cluster(cluster_list, temp_cluser, ESP_ZB_ZCL_CLUSTER_SERVER_ROLE);
 	esp_zb_cluster_list_add_humidity_meas_cluster(cluster_list, humidity_cluser, ESP_ZB_ZCL_CLUSTER_SERVER_ROLE);
 
+	esp_zb_attribute_list_t* esp_zb_groups_cluster = nuos_zb_create_group_cluster();
+	esp_zb_cluster_list_add_groups_cluster(cluster_list, esp_zb_groups_cluster, ESP_ZB_ZCL_CLUSTER_CLIENT_ROLE);
+	printf("Created Cluster Group\n");
+	esp_zb_attribute_list_t *esp_zb_scenes_cluster = nuos_zb_create_scene_cluster();
+	esp_zb_cluster_list_add_scenes_cluster(cluster_list, esp_zb_scenes_cluster, ESP_ZB_ZCL_CLUSTER_CLIENT_ROLE);  
+	printf("Created Cluster Scene\n");
+	
     esp_zb_ep_list_add_gateway_ep(ep_list, cluster_list, endpoint_config);
     esp_zb_device_register(ep_list);
+	esp_zb_zcl_add_privilege_command(1, 0xE000, 0XFD);
     esp_zb_core_action_handler_register(zb_action_handler);
 	//esp_zb_aps_data_indication_handler_register(zb_apsde_data_indication_handler);
 	//esp_zb_factory_reset();
@@ -3135,6 +3544,18 @@ static void esp_zb_task(void *pvParameters)
 
     vTaskDelete(NULL);
 }
+
+// void uart_evt_task(void *arg)
+// {
+//     node_module_evt_t evt;
+
+//     while (1) {
+//         if (xQueueReceive(send_to_uart_evt_queue, &evt, pdMS_TO_TICKS(100))) {
+// 			send_module_ctrl_over_uart(&evt.module, 1, evt.index); 
+//         }
+//     }
+// }
+
 
 
 void app_main(void)
@@ -3162,5 +3583,12 @@ void app_main(void)
     //Added by Nuos
     init_timer();
     //read_device_info();
-    xTaskCreate(esp_zb_task, "Zigbee_main", 8192, NULL, 5, NULL);
+    xTaskCreate(esp_zb_task, "Zigbee_main", 8192, NULL, TASK_PRIORITY_ZB_MAIN, NULL);
+
+
+    // send_to_uart_evt_queue = xQueueCreate(20, sizeof(node_module_evt_t));
+    // assert(send_to_uart_evt_queue);
+	// xTaskCreate(uart_evt_task, "send_evt_task", 4096, NULL, TASK_PRIORITY_UART_EVT, NULL);
+
 }
+

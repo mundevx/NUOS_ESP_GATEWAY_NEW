@@ -3,6 +3,7 @@
 #include "esp_err.h"
 #include "esp_check.h"
 #include "zdo/esp_zigbee_zdo_command.h"
+#include "common.h"
 
 static const char *TAG = "ESP_ZB_SCENE_COMMANDS";
 
@@ -50,8 +51,46 @@ esp_zb_zcl_scenes_extension_field_t nuos_zb_scene_set_onoff_level_cluster_extens
 }
 
 
-void nuos_zb_scenes_store_scene_request(uint16_t group_id, uint8_t scene_id, uint8_t src_ep, uint8_t dst_ep, uint16_t dst_addr_short){
-    esp_zb_zcl_scenes_store_scene_cmd_t cmd_req = {
+void add_group_request_send_to_dst(uint16_t group_id, uint16_t short_addr, uint8_t ep){
+    esp_zb_zcl_groups_add_group_cmd_t cmd_req;
+    cmd_req.group_id = group_id;
+    cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_16_ENDP_PRESENT;
+    cmd_req.zcl_basic_cmd.dst_addr_u.addr_short = short_addr;
+    cmd_req.zcl_basic_cmd.dst_endpoint = ep;
+    cmd_req.zcl_basic_cmd.src_endpoint = 1;
+    esp_zb_zcl_groups_add_group_cmd_req(&cmd_req);
+    ESP_LOGI(TAG, "----------SENDING GROUP REQUEST TO DST----------");
+}
+void add_group_request_send_to_self(uint16_t group_id, uint16_t short_addr, uint8_t ep){
+    esp_zb_zcl_groups_add_group_cmd_t cmd_req;
+    cmd_req.group_id = group_id;
+    cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_16_GROUP_ENDP_NOT_PRESENT;
+    cmd_req.zcl_basic_cmd.dst_addr_u.addr_short = esp_zb_get_short_address();
+    cmd_req.zcl_basic_cmd.dst_endpoint = 1;
+    cmd_req.zcl_basic_cmd.src_endpoint = ep;
+    esp_zb_zcl_groups_add_group_cmd_req(&cmd_req);
+    ESP_LOGI(TAG, "----------SENDING GROUP REQUEST TO SELF----------");
+}
+
+void nuos_zb_scenes_store_scene_request(uint16_t group_id, uint8_t scene_id, 
+                                        uint8_t src_ep, uint8_t dst_ep, 
+                                        uint16_t dst_addr_short){
+
+
+   add_group_request_send_to_self(group_id, esp_zb_get_short_address(), dst_ep);
+   add_group_request_send_to_dst(group_id, dst_addr_short, dst_ep);
+   
+    esp_zb_zcl_scenes_store_scene_cmd_t cmd_req_21 = {
+        .zcl_basic_cmd.dst_addr_u.addr_short = esp_zb_get_short_address(),
+        .zcl_basic_cmd.dst_endpoint = 1,
+        .zcl_basic_cmd.src_endpoint = dst_ep,
+        .group_id = group_id,
+        .scene_id = scene_id,
+        .address_mode = ESP_ZB_APS_ADDR_MODE_16_ENDP_PRESENT,
+    };
+    esp_zb_zcl_scenes_store_scene_cmd_req(&cmd_req_21);
+
+    esp_zb_zcl_scenes_store_scene_cmd_t cmd_req_2 = {
         .zcl_basic_cmd.dst_addr_u.addr_short = dst_addr_short,
         .zcl_basic_cmd.dst_endpoint = dst_ep,
         .zcl_basic_cmd.src_endpoint = src_ep,
@@ -59,9 +98,8 @@ void nuos_zb_scenes_store_scene_request(uint16_t group_id, uint8_t scene_id, uin
         .scene_id = scene_id,
         .address_mode = ESP_ZB_APS_ADDR_MODE_16_ENDP_PRESENT,
     };
-    esp_zb_zcl_scenes_store_scene_cmd_req(&cmd_req);
+    esp_zb_zcl_scenes_store_scene_cmd_req(&cmd_req_2);
 }
-
 
 void nuos_zb_scenes_remove_scene_request(uint16_t group_id, uint8_t scene_id, uint8_t src_ep, uint8_t dst_ep, uint16_t dst_addr_short, uint16_t address_mode){
     esp_zb_zcl_scenes_remove_scene_cmd_t cmd_req;
@@ -87,44 +125,9 @@ void nuos_zb_scene_recall_scene_request(uint16_t group_id, uint8_t scene_id, uin
 	esp_zb_zcl_scenes_recall_scene_cmd_req(&recall_scene_cmd);
 }
 
-void nuos_zb_scene_add_scene_to_self_request(uint16_t group_id, uint8_t scene_id, uint8_t src_ep, uint8_t dst_ep, 
-                                                uint8_t value_on_off, uint8_t value_level, uint16_t colorx, uint16_t colory){
-
-    //nuos_zb_scenes_add_scene_request(group_id, scene_id, src_ep, dst_ep, esp_zb_get_short_address(), value_on_off, value_level, colorx, colory);
-}
-
-void nuos_zb_scene_add_scene_unicast_request(uint16_t group_id, uint8_t scene_id, uint8_t src_ep, uint8_t dst_ep, uint16_t dst_addr_short, 
-                                                uint8_t value_on_off, uint8_t value_level){
-    // nuos_zb_scenes_add_scene_request(group_id, scene_id, src_ep, dst_ep, dst_addr_short, value_on_off, value_level); //unicast cast working
-}
-void nuos_zb_scene_add_scene_broadcast_request(uint16_t group_id, uint8_t scene_id, uint8_t src_ep, uint8_t dst_ep, uint8_t value_on_off, uint8_t value_level){
-    // nuos_zb_scenes_add_scene_request(group_id, scene_id, src_ep, dst_ep, 0xffff, value_on_off, value_level); //broadcast working
-}
-void nuos_zb_scene_add_scene_groupcast_request(uint16_t group_id, uint8_t scene_id, uint8_t src_ep, uint8_t dst_ep, uint8_t value_on_off, uint8_t value_level){
-    // nuos_zb_scenes_add_scene_request(group_id, scene_id, 0, dst_ep, group_id, value_on_off, value_level); //groupcast not working
-}
-
-
-
-void nuos_zb_scene_remove_scene_unicast_request(uint16_t group_id, uint8_t scene_id, uint8_t src_ep, uint8_t dst_ep, uint16_t dst_addr_short){
-        nuos_zb_scenes_remove_scene_request(group_id, scene_id, src_ep, dst_ep, dst_addr_short,  ESP_ZB_APS_ADDR_MODE_16_ENDP_PRESENT);
-}
-void nuos_zb_scene_remove_scene_broadcast_request(uint16_t group_id, uint8_t scene_id, uint8_t src_ep, uint8_t dst_ep){
-    	nuos_zb_scenes_remove_scene_request(group_id, scene_id, src_ep, dst_ep, 0xffff, ESP_ZB_APS_ADDR_MODE_16_ENDP_PRESENT); //broadcast working
-}
-void nuos_zb_scene_remove_scene_groupcast_request(uint16_t group_id, uint8_t scene_id, uint8_t src_ep, uint8_t dst_ep){
-    	nuos_zb_scenes_remove_scene_request(group_id, scene_id, 0, dst_ep, group_id, ESP_ZB_APS_ADDR_MODE_16_GROUP_ENDP_NOT_PRESENT); //groupcast not working
-}
-
 
 void nuos_zb_scene_store_scene_unicast_request(uint16_t group_id, uint8_t scene_id, uint8_t src_ep, uint8_t dst_ep, uint16_t dst_addr_short){
         nuos_zb_scenes_store_scene_request(group_id, scene_id, src_ep, dst_ep, dst_addr_short);
-}
-void nuos_zb_scene_store_scene_broadcast_request(uint16_t group_id, uint8_t scene_id, uint8_t src_ep, uint8_t dst_ep){
-    	nuos_zb_scenes_store_scene_request(group_id, scene_id, src_ep, dst_ep, 0xffff); //broadcast not working
-}
-void nuos_zb_scene_store_scene_groupcast_request(uint16_t group_id, uint8_t scene_id, uint8_t src_ep, uint8_t dst_ep){
-    	nuos_zb_scenes_store_scene_request(group_id, scene_id, 0, dst_ep, group_id);    //groupcast not working
 }
 
 
@@ -201,13 +204,11 @@ esp_err_t zb_get_scene_store_resp_handler(const esp_zb_zcl_store_scene_message_t
     printf("=================> %d <=================\n", message->info.dst_endpoint);
     printf("group_id: %d  scene_id: %d  cluster: %d\n", message->group_id, message->scene_id, message->info.cluster);
 
-
     return ESP_OK;
 }
 
 esp_err_t nuos_zb_scene_action_handler(esp_zb_core_action_callback_id_t callback_id, const void *message){
     esp_err_t ret = -1;
-    //printf("On Scene Recall!!\n");
     switch (callback_id) {
         case ESP_ZB_CORE_SCENES_STORE_SCENE_CB_ID:
             ret = zb_get_scene_store_resp_handler ((esp_zb_zcl_store_scene_message_t *)message);

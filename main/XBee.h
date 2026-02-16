@@ -787,7 +787,7 @@ public:
 	 * NOTE: calling this method resets the current response, so make sure you first consume the
 	 * current response
 	 */
-	void readPacket();
+	bool readPacket();
 	/**
 	 * Waits a maximum of <i>timeout</i> milliseconds for a response packet before timing out; returns true if packet is read.
 	 * Returns false if timeout or error occurs.

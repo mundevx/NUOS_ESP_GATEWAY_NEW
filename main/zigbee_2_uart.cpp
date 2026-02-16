@@ -21,30 +21,54 @@ static const char *TAG                                          = "ESP_ZB_TO_UAR
 #define UART_TX_PIN                                             5
 #define UART_RX_PIN                                             4
 #define UART_BAUD_RATE                                          115200
-#define UART_BUF_SIZE                                           (1024)
+#define UART_BUF_SIZE                                           (2048)
 
-static portMUX_TYPE uart_mutex = portMUX_INITIALIZER_UNLOCKED;
+#define UART_MAX_PAYLOAD                                        256
+
+typedef struct {
+    uint16_t len;
+    uint8_t  data[UART_MAX_PAYLOAD];
+} uart_rx_msg_t;
+
+
+QueueHandle_t uart_rx_queue = NULL;
 
 void uart_receiver_task(void *arg) {
-    static uint8_t data[UART_BUF_SIZE] = {0}; 
+    static uint8_t rx_buf[UART_BUF_SIZE] = {0}; 
+    static uart_rx_msg_t msg;
     while(1) {
-         vTaskDelay(10 / portTICK_PERIOD_MS);
+        memset(&msg, 0, sizeof(msg));   // clear all fields
+        memset(rx_buf, 0, sizeof(rx_buf));
         // Read ONE byte at a time to feed into XBee parser
-        int len = uart_read_bytes(UART_PORT_NUM, data, sizeof(data), 100 / portTICK_PERIOD_MS);
+        int len = uart_read_bytes(UART_PORT_NUM, rx_buf, sizeof(rx_buf), 10 / portTICK_PERIOD_MS);
         if(len > 1) {
-            data[len] = '\0'; // Null-terminate safely 
+            // rx_buf[len] = '\0'; // Null-terminate safely 
             // Echo back received data
-            printf("\n\nReceived encrypted data from Gateway: \n");
-            for(int i = 0; i < len; i++) {
-                // Process each byte
-                printf(" %02X", data[i]);
+            //printf("\n\nReceived encrypted data from Gateway: \n");
+            // process_decrypt_uart_receiver_data(rx_buf, len);
+            
+            
+            msg.len = len;
+            memcpy(msg.data, rx_buf, len);
+
+            if (xQueueSend(uart_rx_queue, &msg, 0) != pdPASS) {
+                ESP_LOGW("UART", "RX queue full, dropping packet");
             }
-            printf("\n");
-
-            process_decrypt_uart_receiver_data( data, len);
-
+            
         }
        
+    }
+}
+
+uart_rx_msg_t msg;
+void uart_process_task(void *arg)
+{
+   
+    while (1) {
+        if (xQueueReceive(uart_rx_queue, &msg, portMAX_DELAY) == pdPASS) {
+            printf("\n\n===> New encrypted data received from Gateway (%d bytes)\n", msg.len);
+            process_decrypt_uart_receiver_data((const uint8_t*)msg.data, msg.len);
+        }
     }
 }
 
@@ -82,24 +106,33 @@ extern "C" void uart_init(void)
     }
     // optional: small delay while bringing hardware up (for debugging only)
     vTaskDelay(pdMS_TO_TICKS(50));
-    xTaskCreate(uart_receiver_task, "uart_receiver_task", 4096, NULL, 20, NULL);
-    //send_serial("NUOS Zigbee Gateway!!");
+    xTaskCreate(uart_receiver_task, "uart_receiver_task", 4096, NULL, TASK_PRIORITY_UART_RXD, NULL);
+
     vTaskDelay(pdMS_TO_TICKS(50));
+    uart_rx_queue = xQueueCreate(
+        10,                    // queue depth
+        sizeof(uart_rx_msg_t)  // item size
+    );
+
+    if (uart_rx_queue == NULL) {
+        ESP_LOGE("UART", "Failed to create UART RX queue");
+        return;
+    }
+    xTaskCreate(uart_process_task,  "uart_proc", 4096, NULL, TASK_PRIORITY_UART_PROCESS,  NULL);
+    init_uart_queue();
 }    
 
 extern "C" int uart_putc(uint8_t byte) {
     return uart_write_bytes(UART_PORT_NUM, (const char*)&byte, 1);
 }
 
-extern "C" int uart_put_all(uint8_t *byte, uint8_t len) {
-    printf("\nSending encrypted data to Gateway: \n");
-    for(int i = 0; i < len; i++) {
-        printf(" %02x", byte[i]);
-    }
-    printf("\n");
-    
-    uart_write_bytes(UART_PORT_NUM, (const char*)byte, len);
-    return uart_write_bytes(UART_PORT_NUM, "\n", 1); 
+extern "C" int uart_put_all(const uint8_t *byte, const uint8_t len) {
+    uart_write_bytes(UART_PORT_NUM, (const char*)byte, len);  
+    if (uart_wait_tx_done(UART_PORT_NUM, pdMS_TO_TICKS(100)) != ESP_OK) {
+        ESP_LOGW(TAG, "UART TX busy / timeout");
+        return -1;
+    } 
+    return len; 
 }
 extern "C" int uart_send_bytes_to_gateway(uint8_t *byte, uint8_t len) {
 

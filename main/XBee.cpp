@@ -32,8 +32,8 @@
 #include "esp_timer.h"
 #include "zigbee_2_uart.h"
 
-uint8_t my_byte[1024];
-uint8_t byte_counter = 0;
+static uint8_t my_byte[1024];
+static uint8_t byte_counter = 0;
 
 XBeeResponse::XBeeResponse() {
 
@@ -907,7 +907,7 @@ bool XBee::readPacket(int timeout) {
     return false;
 }
 
-void XBee::readPacket() {
+bool XBee::readPacket() {
 	// reset previous response
 	if (_response.isAvailable() || _response.isError()) {
 		// discard previous packet and start over
@@ -923,7 +923,7 @@ void XBee::readPacket() {
         	// new packet start before previous packeted completed -- discard previous packet and start over
 			printf("UNEXPECTED_START_BYTE\n");
         	_response.setErrorCode(UNEXPECTED_START_BYTE);
-        	return;
+        	return false;
         }
 
 		if (_pos > 0 && b == ESCAPE) {
@@ -982,7 +982,7 @@ void XBee::readPacket() {
 				if (_pos > MAX_FRAME_DATA_SIZE) {
 					// exceed max size.  should never occur
 					_response.setErrorCode(PACKET_EXCEEDS_BYTE_ARRAY_LENGTH);
-					return;
+					return false;
 				}
 
 				// check if we're at the end of the packet
@@ -1007,7 +1007,7 @@ void XBee::readPacket() {
 					// reset state vars
 					_pos = 0;
 
-					return;
+					return false;
 				} else {
 					// add to packet array, starting with the fourth byte of the apiFrame
 					_response.getFrameData()[_pos - 5] = b;
@@ -1015,6 +1015,7 @@ void XBee::readPacket() {
 				}
         }
     }
+	return true;
 }
 
 // it's peanut butter jelly time!!
@@ -1533,9 +1534,9 @@ uint8_t RemoteAtCommandRequest::getFrameDataLength() {
 
 void XBee::send(XBeeRequest &request) {
 	// the new new deal
+	uint8_t checksum = 0;
 
 	byte_counter = 0;
-	//printf("Sending:");
 	sendByte(START_BYTE, false);
 
 	// send length
@@ -1544,13 +1545,10 @@ void XBee::send(XBeeRequest &request) {
 
 	sendByte(msbLen, true);
 	sendByte(lsbLen, true);
-
 	// api id
 	sendByte(request.getApiId(), true);
 	sendByte(request.getFrameId(), true);//4th
-
-	uint8_t checksum = 0;
-
+	
 	// compute checksum, start at api id
 	checksum+= request.getApiId();
 	checksum+= request.getFrameId();
@@ -1566,27 +1564,23 @@ void XBee::send(XBeeRequest &request) {
 	// send checksum
 	sendByte(checksum, true);
 
+	//my_byte[byte_counter] = '\n';
+	//uart_put_all(my_byte, byte_counter+1); 
+
 	uart_put_all(my_byte, byte_counter); 
 }
 
 void XBee::sendByte(uint8_t b, bool escape) {
 
-	// if (escape && (b == START_BYTE || b == ESCAPE || b == XON || b == XOFF)) {
-	// 	my_byte[byte_counter++] = ESCAPE;
-	// 	my_byte[byte_counter++] = b ^ 0x20;
-	// 	//write(ESCAPE);
-	// 	//write(b ^ 0x20);
-	// 	//printf(" Ex%02x", b);
-	// } else {
-	// 	//write(b);
-	// 	my_byte[byte_counter++] = b;
-	// 	//printf(" %02x", b);
-	// }
-	 my_byte[byte_counter++] = b;
+	if (escape && (b == START_BYTE || b == ESCAPE || b == XON || b == XOFF)) {
+		my_byte[byte_counter++] = ESCAPE;
+		my_byte[byte_counter++] = b ^ 0x20;
+	} else {
+		my_byte[byte_counter++] = b;
+	}
 }
 
 // atxs/0*0@ID,00!
-
 void XBeeWithCallbacks::loop() {
 	if (loopTop())
 		loopBottom();

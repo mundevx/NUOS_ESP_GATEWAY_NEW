@@ -9,8 +9,9 @@
 #include "stdlib.h"
 #include "nuos_nvs.h"
 #include "common.h"
+#include "frame_enc_dec.h"
 
-#define NVS_NAMESPACE "zigbee_storage"
+#define NVS_NAMESPACE "zb_storage"
 
 extern node_module_t device_array[MAX_DEVICES];
 extern uint16_t devices_count;
@@ -45,7 +46,7 @@ uint16_t is_record_already_exists_in_nvs(uint16_t short_addr) {
     node_module_t stored_device;
     size_t size = sizeof(stored_device);
 
-    ESP_ERROR_CHECK(nvs_open("storage", NVS_READWRITE, &nvs_handle1));
+    ESP_ERROR_CHECK(nvs_open(NVS_NAMESPACE, NVS_READWRITE, &nvs_handle1));
     // Search for duplicate short address and update
     for (int i = 0; i < MAX_DEVICES; i++) {
         char key[16];
@@ -71,7 +72,7 @@ esp_err_t save_or_update_light_bulb_device_to_nvs(void* device_void) {
     node_module_t stored_device;
     size_t size = sizeof(stored_device);
 
-    ESP_ERROR_CHECK(nvs_open("storage", NVS_READWRITE, &nvs_handle1));
+    ESP_ERROR_CHECK(nvs_open(NVS_NAMESPACE, NVS_READWRITE, &nvs_handle1));
     // Search for duplicate short address and update
     for (int i = 0; i < MAX_DEVICES; i++) {
         char key[16];
@@ -79,17 +80,21 @@ esp_err_t save_or_update_light_bulb_device_to_nvs(void* device_void) {
 
         esp_err_t err = nvs_get_blob(nvs_handle1, key, &stored_device, &size);
 
-        vTaskDelay(pdMS_TO_TICKS(1));
+        //vTaskDelay(pdMS_TO_TICKS(1));
         if (err == ESP_OK) {
             // If a device with the same short_addr exists, update its parameters
-            if (stored_device.short_addr == new_device->short_addr) {
-                ESP_LOGI(TAG, "Duplicate short address(0x%x) found, updating existing(0x%x) device.", new_device->short_addr, stored_device.short_addr);
+            //if (stored_device.short_addr == new_device->short_addr) {
+            if (memcmp(stored_device.ieee_addr, new_device->ieee_addr, sizeof(esp_zb_ieee_addr_t)) == 0) {
+                //ESP_LOGI(TAG, "Duplicate short address(0x%x) found, updating existing(0x%x) device.", new_device->short_addr, stored_device.short_addr);
 
                 strcpy(stored_device.manuf_name, new_device->manuf_name);
                 strcpy(stored_device.model_id, new_device->model_id);
             
                 stored_device.module_id = new_device->module_id;
                 stored_device.room_id = new_device->room_id;
+
+                stored_device.short_addr = new_device->short_addr;
+
 
                 // Copy endpoints (including device_t fields) from new_device to stored_device
                 stored_device.ep_counts = new_device->ep_counts;
@@ -99,18 +104,18 @@ esp_err_t save_or_update_light_bulb_device_to_nvs(void* device_void) {
                 }
                 err = nvs_set_blob(nvs_handle1, key, &stored_device, sizeof(node_module_t));
                 if (err == ESP_OK) {
-                    ESP_LOGI(TAG, "Device updated in NVS");
+                    //ESP_LOGI(TAG, "Device updated in NVS");
                     nvs_commit(nvs_handle1);
                 }
                 nvs_close(nvs_handle1);
                 return err; // Return success or failure of update
             }
         } else if (err == ESP_ERR_NVS_NOT_FOUND) {
-            new_device->module_id = i+1;
+            //new_device->module_id = i+1;
             // Slot is empty, save the new device
             err = nvs_set_blob(nvs_handle1, key, new_device, sizeof(node_module_t));
             if (err == ESP_OK) {
-                ESP_LOGI(TAG, "New device saved to NVS");
+                //ESP_LOGI(TAG, "New device saved to NVS");
                 nvs_commit(nvs_handle1);
                 nvs_close(nvs_handle1);
                 return ESP_OK; // Return success
@@ -142,7 +147,7 @@ esp_err_t read_all_devices_from_nvs(void* stored_device) {
 
     devices_count = 0;
 
-    ESP_ERROR_CHECK(nvs_open("storage", NVS_READWRITE, &nvs_handle1));
+    ESP_ERROR_CHECK(nvs_open(NVS_NAMESPACE, NVS_READWRITE, &nvs_handle1));
 
     for (int i = 0; i < MAX_DEVICES; i++) {
         // Generate the NVS key based on the index
@@ -152,16 +157,16 @@ esp_err_t read_all_devices_from_nvs(void* stored_device) {
 		// Read the device from NVS
 		err = nvs_get_blob(nvs_handle1, key, &device_array[devices_count], &size);
 		if (err == ESP_OK) {
-			printf("---------Device read from NVS---------\n");
-			print_ieee_addr(device_array[devices_count].ieee_addr);
-			printf("SHORT ADDR=0x%04x\n", device_array[devices_count].short_addr);
-			printf("TOTAL EP=%d\n", device_array[devices_count].ep_counts);
+			// printf("---------Device read from NVS---------\n");
+			// print_ieee_addr(device_array[devices_count].ieee_addr);
+			// printf("SHORT ADDR=0x%04x\n", device_array[devices_count].short_addr);
+			// printf("TOTAL EP=%d\n", device_array[devices_count].ep_counts);
 			if(device_array[devices_count].ep_counts > MAX_DEVICES_IN_MODULE) device_array[devices_count].ep_counts = MAX_DEVICES_IN_MODULE;
             
 			for(int j=0; j<device_array[devices_count].ep_counts; j++){
-				printf("EP[%d]=%d\n", j, device_array[devices_count].endpoint[j].ep);
-				printf("DEV_NAME[%d]=%s\n", j, device_array[devices_count].endpoint[j].dev_name);
-				printf("dev_type[%d]=%d\n", j, device_array[devices_count].endpoint[j].dev_type);
+				// printf("EP[%d]=%d\n", j, device_array[devices_count].endpoint[j].ep);
+				// printf("DEV_NAME[%d]=%s\n", j, device_array[devices_count].endpoint[j].dev_name);
+				// printf("dev_type[%d]=%d\n", j, device_array[devices_count].endpoint[j].dev_type);
                 // if(device_array[devices_count].endpoint[j].dev_id != 0){
                 //     total_ep_counts++;
                 // }
@@ -201,7 +206,7 @@ esp_err_t read_all_devices_from_nvs(void* stored_device) {
 esp_err_t clear_all_records_from_nvs() {
     esp_err_t err = ESP_OK;
 
-    ESP_ERROR_CHECK(nvs_open("storage", NVS_READWRITE, &nvs_handle1));
+    ESP_ERROR_CHECK(nvs_open(NVS_NAMESPACE, NVS_READWRITE, &nvs_handle1));
 
     if (nvs_erase_all(nvs_handle1) != ESP_OK) {
         ESP_LOGE(TAG, "Failed to erase all records from NVS");
@@ -216,7 +221,7 @@ esp_err_t clear_all_records_from_nvs() {
 esp_err_t clear_single_record_from_nvs(int index) {
     esp_err_t err = ESP_OK;
 
-    ESP_ERROR_CHECK(nvs_open("storage", NVS_READWRITE, &nvs_handle1));
+    ESP_ERROR_CHECK(nvs_open(NVS_NAMESPACE, NVS_READWRITE, &nvs_handle1));
     char key[16];
     snprintf(key, sizeof(key), "device_%d", index);
     if (nvs_erase_key(nvs_handle1 , key) != ESP_OK) {
@@ -234,7 +239,7 @@ esp_err_t remove_zigbee_device_from_nvs(uint16_t short_addr) {
     node_module_t stored_device;
     size_t size = sizeof(stored_device);
     //printf("remove_zigbee_device_from_nvs:0x%x\n", short_addr);
-    ESP_ERROR_CHECK(nvs_open("storage", NVS_READWRITE, &nvs_handle1));
+    ESP_ERROR_CHECK(nvs_open(NVS_NAMESPACE, NVS_READWRITE, &nvs_handle1));
     // Search for duplicate short address and update
     for (int i = 0; i < MAX_DEVICES; i++) {
         char key[16];
@@ -276,7 +281,15 @@ node_module_t *find_device_by_short_addr(uint16_t target_short_addr) {
     }
     return NULL; // Device not found
 }
+int find_node_index_by_ieee_addr(esp_zb_ieee_addr_t ieee_addr){
 
+    for (int i = 0; i < MAX_DEVICES; i++) {
+        if (memcmp(device_array[i].ieee_addr, ieee_addr, sizeof(esp_zb_ieee_addr_t)) == 0) {
+            return i; // Found matching device
+        }
+    }
+    return -1; // result not found
+}
 int find_node_index_by_short_addr(uint16_t target_short_addr) {
     for (int i = 0; i < MAX_DEVICES; i++) {
         if (device_array[i].short_addr == target_short_addr) {
@@ -286,24 +299,11 @@ int find_node_index_by_short_addr(uint16_t target_short_addr) {
     return -1; // result not found
 }
 
-// bool find_device_by_dev_id12(uint16_t target_dev_id, uint8_t* nodeindex, uint8_t* epindex) {
-//     for (int i = 0; i < MAX_DEVICES; i++) {
-// 		for (int j = 0; j < 4; j++) {
-// 			if (device_array[i].endpoint[j].dev_id == target_dev_id) {
-//                 *nodeindex = i;
-//                 *epindex = j;
-// 				return true;
-// 			}
-// 		}
-//     }
-//     return false;
-// }
-
-bool find_device_by_dev_id(uint16_t module_id, uint16_t target_dev_id, uint8_t* nodeindex, uint8_t* epindex) {
+bool find_device_by_dev_id(uint16_t room_id, uint16_t module_id, uint16_t target_dev_id, uint8_t* nodeindex, uint8_t* epindex) {
     for (int i = 0; i < MAX_DEVICES; i++) {
-        if(device_array[i].module_id == module_id){
+        if((room_id == device_array[i].room_id && device_array[i].module_id == module_id) ){
             for (int j = 0; j < 4; j++) {
-                if (device_array[i].endpoint[j].dev_id == target_dev_id) {
+                if (device_array[i].endpoint[j].ep == target_dev_id) {
                     *nodeindex = i;
                     *epindex = j;
                     return true;
@@ -316,8 +316,9 @@ bool find_device_by_dev_id(uint16_t module_id, uint16_t target_dev_id, uint8_t* 
 
 node_module_t *find_device_by_room_module_id(uint8_t r, uint8_t m) {
     for (int i = 0; i < MAX_DEVICES; i++) {
-        if (device_array[i].room_id == r) {
-            if (device_array[i].module_id == m) {
+        if (device_array[i].room_id == r && device_array[i].room_id != 255) {
+            if (device_array[i].module_id == m ) {
+                printf("-------------->device_array[i].ep_counts:%d\n", device_array[i].ep_counts);
                 return &device_array[i]; // Found matching device
             }
         }
@@ -325,11 +326,22 @@ node_module_t *find_device_by_room_module_id(uint8_t r, uint8_t m) {
     return NULL; // Device not found
 }
 
-node_module_t *find_device_by_node(uint16_t m, uint8_t did) {
+int find_device_index_by_room_module_id(uint8_t r, uint8_t m) {
     for (int i = 0; i < MAX_DEVICES; i++) {
-        if (device_array[i].module_id == m) {
+        if (device_array[i].room_id == r && device_array[i].room_id != 255) {
+            if (device_array[i].module_id == m ) {
+                return i;
+            }
+        }
+    }
+    return -1; // Device not found
+}
+
+node_module_t *find_device_by_node(uint16_t m, uint8_t d) {
+    for (int i = 0; i < MAX_DEVICES; i++) {
+        if (device_array[i].module_id == m && device_array[i].room_id != 255) {
             for (int j = 0; j < device_array[i].ep_counts; j++) {
-                if (device_array[i].endpoint[j].dev_id == did) {
+                if (device_array[i].endpoint[j].ep == d) {
                     return &device_array[i]; // Found matching device
                 }
             }
@@ -340,7 +352,7 @@ node_module_t *find_device_by_node(uint16_t m, uint8_t did) {
 
 uint16_t find_device_short_addr(uint16_t m, uint8_t did) {
     for (int i = 0; i < MAX_DEVICES; i++) {
-        if (device_array[i].module_id == m) {
+        if (device_array[i].module_id == m && device_array[i].room_id != 255) {
             return device_array[i].short_addr;
         }
     }
@@ -364,31 +376,31 @@ uint8_t get_previous_val(uint8_t nodeindex, uint8_t epindex){
 
 bool find_group_and_scene(uint16_t short_addr, uint16_t did, uint16_t *group_id, uint8_t *scene_id)
 {
-    for (int i = 0; i < 100; ++i) {
-        if (scene_data_t[i].short_addr == short_addr &&
-            scene_data_t[i].did == did) {
-            *group_id = scene_data_t[i].group_id;
-            *scene_id = scene_data_t[i].scene_id;
-            return true; // Found
-        }
-    }
+    // for (int i = 0; i < 100; ++i) {
+    //     if (scene_data_t[i].short_addr == short_addr &&
+    //         scene_data_t[i].did == did) {
+    //         *group_id = scene_data_t[i].group_id;
+    //         *scene_id = scene_data_t[i].scene_id;
+    //         return true; // Found
+    //     }
+    // }
     return false; // Not found
 }
 
 
 // Assuming you have functions like these for NVS
 void save_devices_to_nvs() {
-    nvs_handle_t nvs_handle;
-    esp_err_t err = nvs_open("zigbee_storage", NVS_READWRITE, &nvs_handle);
+  
+    esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &nvs_handle1);
     if (err == ESP_OK) {
         // Save device count
-        nvs_set_u16(nvs_handle, "dev_count", devices_count);
+        nvs_set_u16(nvs_handle1, "dev_count", devices_count);
         
         // Save device array
-        nvs_set_blob(nvs_handle, "device_array", device_array, devices_count * sizeof(node_module_t));
+        nvs_set_blob(nvs_handle1, "device_array", device_array, devices_count * sizeof(node_module_t));
         
-        nvs_commit(nvs_handle);
-        nvs_close(nvs_handle);
+        nvs_commit(nvs_handle1);
+        nvs_close(nvs_handle1);
         ESP_LOGI(TAG, "Saved %d devices to NVS", devices_count);
     }
 }
@@ -416,9 +428,14 @@ uint8_t remove_invalid_ieee_devices() {
     printf("\nRemoving invalid devices...%d\n", devices_count);
     uint8_t removed = 0;
     for (uint16_t i = 0; i < devices_count; ) {
-        if (is_ieee_invalid(device_array[i].ieee_addr)) {
+        if (is_ieee_invalid(device_array[i].ieee_addr) || device_array[i].room_id == 255) {
+        //if (is_ieee_invalid(device_array[i].ieee_addr)) {
             printf("  Removing index %d: Module ID %d\n", i, device_array[i].module_id);
-            
+
+            send_module_remove_device_on_uart(device_array[i].room_id, device_array[i].module_id, device_array[i].ieee_addr);
+            vTaskDelay(pdMS_TO_TICKS(100));
+            gateway_leave_device(device_array[i].short_addr, device_array[i].ieee_addr, false);      
+            remove_zigbee_device_from_nvs(device_array[i].short_addr);  
             // Shift devices
             for (uint16_t j = i; j < devices_count - 1; j++) {
                 memcpy(&device_array[j], &device_array[j + 1], sizeof(node_module_t));
@@ -573,7 +590,7 @@ void print_devices_compact() {
                /////////////////////////////////////////////////////////////
                printf(" | ");
                for(int j=0; j<device->ep_counts; j++){
-                   printf(" 0x%d", device->endpoint[j].dev_type);   
+                   printf(" (%d)0x%X", device->endpoint[j].ep, device->endpoint[j].dev_type);   
                }
         printf("\n");
     }
@@ -590,7 +607,7 @@ void print_endpoints_details() {
             endpoint_t *ep = &device->endpoint[ep_idx];
             
             printf("Device[%d].EP[%d]: ID=0x%04X, Type=0x%04X, Name='%s'\n",
-                   i, ep->ep, ep->dev_id, ep->dev_type, ep->dev_name);
+                   i, ep->ep, ep->ep, ep->dev_type, ep->dev_name);
             
             // For each cluster
             for (uint8_t cl_idx = 0; cl_idx < ep->cluster_counts; cl_idx++) {
@@ -602,164 +619,164 @@ void print_endpoints_details() {
     }
 }
 
-esp_err_t nvs_store_or_update_scene(const device_scene_handle_t *new_scene)
-{
-    esp_err_t err = ESP_OK;
-    // nvs_handle_t nvs_handle;
-    // device_scene_handle_t scene_handle[SCENE_ARRAY_SIZE] = {0};
-    // err = nvs_open("storage", NVS_READWRITE, &nvs_handle1);
-    // if (err != ESP_OK) return err;
+///////////////////////////////////////////////////////////////////////////////////////
+esp_err_t clear_scene_nodes_nvs(void) {
+    esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &nvs_handle1);
+    if (err != ESP_OK) return err;
 
-    // // Read existing array (if present)
-    // size_t required_size = sizeof(scene_handle);
-    // err = nvs_get_blob(nvs_handle, "scene_array", scene_handle, &required_size);
-    // if (err == ESP_ERR_NVS_NOT_FOUND) {
-    //     // No array yet, will create new
-    //     memset(scene_handle, 0, sizeof(scene_handle));
-    //     err = ESP_OK;
-    // } else if (err != ESP_OK) {
-    //     nvs_close(nvs_handle);
-    //     return err;
-    // }
+    if (nvs_handle1 == 0) {
+        ESP_LOGE("SCENE", "NVS handle not initialized");
+        nvs_close(nvs_handle1);
+        return ESP_FAIL;
+    }
+    
+    // Erase both keys
+    err = nvs_erase_key(nvs_handle1, "nodes_count");
+    if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND) {
+        ESP_LOGE("SCENE", "Failed to erase nodes_count: %s", esp_err_to_name(err));
+        nvs_close(nvs_handle1);
+        return err;
+    }
+    
+    err = nvs_erase_key(nvs_handle1, "nodes_array");
+    if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND) {
+        ESP_LOGE("SCENE", "Failed to erase nodes_array: %s", esp_err_to_name(err));
+        return err;
+    }
+    
+    // Commit changes
+    err = nvs_commit(nvs_handle1);
+    if (err != ESP_OK) {
+        ESP_LOGE("SCENE", "Failed to commit clear operation: %s", esp_err_to_name(err));
+    } else {
+        ESP_LOGI("SCENE", "Cleared scene nodes from NVS");
+    }
+    nvs_close(nvs_handle1);
+    return err;
+}
+// Store entire array + count to NVS as blobs
+esp_err_t store_scene_nodes(void) {
 
-    // // Check if record exists (by unique field, e.g., scene_id and group_id)
-    // bool found = false;
-    // for (int i = 0; i < SCENE_ARRAY_SIZE; i++) {
-    //     if (scene_handle[i].scene_id == new_scene->scene_id &&
-    //         scene_handle[i].group_id == new_scene->group_id) {
-    //         // Update existing
-    //         scene_handle[i] = *new_scene;
-    //         found = true;
-    //         break;
-    //     }
-    // }
+    esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &nvs_handle1);
+    if (err != ESP_OK) return err;
 
-    // // If not found, add to first empty slot
-    // if (!found) {
-    //     for (int i = 0; i < SCENE_ARRAY_SIZE; i++) {
-    //         if (scene_handle[i].scene_id == 0 && scene_handle[i].group_id == 0) {
-    //             scene_handle[i] = *new_scene;
-    //             found = true;
-    //             break;
-    //         }
-    //     }
-    // }
+    // Store count
+    err = nvs_set_u16(nvs_handle1, "nodes_count", scene_nodes_count);
+    if (err != ESP_OK) {    
+        nvs_close(nvs_handle1);
+        return err;
+    }
 
-    // if (!found) {
-    //     nvs_close(nvs_handle);
-    //     return ESP_ERR_NO_MEM; // Array full
-    // }
+    if (scene_nodes_count > 0) {
+        // Store array as blob (only used portion)
+        err = nvs_set_blob(nvs_handle1, "nodes_array", 
+                          scene_nodes, 
+                          scene_nodes_count * sizeof(node_mapping_t));
+    }
 
-    // // Write back the array
-    // err = nvs_set_blob(nvs_handle, "scene_array", scene_handle, sizeof(scene_handle));
-    // if (err == ESP_OK) {
-    //     err = nvs_commit(nvs_handle);
-    // }
-    // nvs_close(nvs_handle);
+    if (err == ESP_OK) {
+        err = nvs_commit(nvs_handle1);
+    }
+
+    nvs_close(nvs_handle1);
     return err;
 }
 
-esp_err_t nvs_read_scene_array(device_scene_handle_t *scene_handle)
-{
-    nvs_handle_t nvs_handle;
-    esp_err_t err = nvs_open("storage", NVS_READONLY, &nvs_handle);
+// Load entire array + count from NVS (populates globals)
+esp_err_t load_scene_nodes(void) {
+
+    esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READONLY, &nvs_handle1);
     if (err != ESP_OK) return err;
 
-    size_t required_size = SCENE_ARRAY_SIZE * sizeof(device_scene_handle_t);
-    err = nvs_get_blob(nvs_handle, "scene_array", scene_handle, &required_size);
-    nvs_close(nvs_handle);
-    return err;
-}
+    // Get count
+    size_t count_size = sizeof(scene_nodes_count);
+    err = nvs_get_u16(nvs_handle1, "nodes_count", &scene_nodes_count);
+    if (err != ESP_OK) {
+        scene_nodes_count = 0;
+        ESP_LOGI("SCENE", "No nodes count found, starting fresh");
+        nvs_close(nvs_handle1);
+        return ESP_OK;
+    }
 
-esp_err_t nvs_read_scene_by_id(uint16_t group_id, uint8_t scene_id, device_scene_handle_t *scene)
-{
-    device_scene_handle_t scene_handle[SCENE_ARRAY_SIZE] = {0};
-    esp_err_t err = nvs_read_scene_array(scene_handle);
-    if (err != ESP_OK) return err;
+    if (scene_nodes_count > MAX_SCENE_NODES) {
+        ESP_LOGE("SCENE", "Invalid count %d > %d, resetting", scene_nodes_count, MAX_SCENE_NODES);
+        scene_nodes_count = 0;
+        nvs_close(nvs_handle1);
+        return ESP_ERR_INVALID_SIZE;
+    }
 
-    for (int i = 0; i < SCENE_ARRAY_SIZE; i++) {
-        if (scene_handle[i].scene_id == scene_id && scene_handle[i].group_id == group_id) {
-            *scene = scene_handle[i];
+    if (scene_nodes_count > 0) {
+        size_t required_size = 0;
+        err = nvs_get_blob(nvs_handle1, "nodes_array", NULL, &required_size);
+        if (err != ESP_OK || required_size != scene_nodes_count * sizeof(node_mapping_t)) {
+            ESP_LOGW("SCENE", "Array size mismatch, count=%d, got_size=%d", 
+                     scene_nodes_count, (int)required_size);
+            scene_nodes_count = 0;
+            nvs_close(nvs_handle1);
             return ESP_OK;
         }
+
+        // Load array
+        err = nvs_get_blob(nvs_handle1, "nodes_array", scene_nodes, &required_size);
+        if (err != ESP_OK) {
+            ESP_LOGE("SCENE", "Failed to read array");
+            scene_nodes_count = 0;
+        }
     }
-    return ESP_ERR_NOT_FOUND;
-}
 
-esp_err_t nvs_delete_scene(uint16_t group_id, uint8_t scene_id)
-{
-    esp_err_t err = ESP_OK;
-    // nvs_handle_t nvs_handle;
-    // device_scene_handle_t scene_handle[SCENE_ARRAY_SIZE] = {0};
-    // err = nvs_open("storage", NVS_READWRITE, &nvs_handle1);
-    // if (err != ESP_OK) return err;
+    ESP_LOGI("SCENE", "Loaded %d scene nodes", scene_nodes_count);
+    for(int i=0; i<scene_nodes_count; i++){
+        printf("|--group--|--scene--|--devid--|--room--|--module--|\n");
+        printf("    %d    ", scene_nodes[i].group_id);
+                   printf("    %d   ", scene_nodes[i].scene_id);
+                             printf("    %d   ", scene_nodes[i].device_id);
+                                       printf("    %d   ", scene_nodes[i].room_id);
+                                                 printf("    %d    \n", scene_nodes[i].module_id);
 
-    // size_t required_size = sizeof(scene_handle);
-    // err = nvs_get_blob(nvs_handle, "scene_array", scene_handle, &required_size);
-    // if (err != ESP_OK) {
-    //     nvs_close(nvs_handle);
-    //     return err;
-    // }
-
-    // bool found = false;
-    // for (int i = 0; i < SCENE_ARRAY_SIZE; i++) {
-    //     if (scene_handle[i].scene_id == scene_id && scene_handle[i].group_id == group_id) {
-    //         memset(&scene_handle[i], 0, sizeof(device_scene_handle_t)); // Mark as deleted
-    //         found = true;
-    //         break;
-    //     }
-    // }
-
-    // if (!found) {
-    //     nvs_close(nvs_handle);
-    //     return ESP_ERR_NOT_FOUND;
-    // }
-
-    // err = nvs_set_blob(nvs_handle, "scene_array", scene_handle, sizeof(scene_handle));
-    // if (err == ESP_OK) {
-    //     err = nvs_commit(nvs_handle);
-    // }
-    // nvs_close(nvs_handle);
-    return err;
+    }
+    nvs_close(nvs_handle1);
+    return ESP_OK;
 }
 
 
 
-// esp_err_t nvs_get_last_ids(uint16_t *group_id, uint8_t *scene_id)
-// {
-//     esp_err_t err = nvs_open("storage", NVS_READWRITE, &nvs_handle1);
-//     if (err != ESP_OK) return err;
+uint16_t generate_next_for_node(uint8_t room_id, uint8_t module_id, uint8_t device_id) {
+    if (scene_nodes_count >= MAX_SCENE_NODES) {
+        ESP_LOGE("SCENE", "Max nodes reached");
+        return 0xFFFF;
+    }
+    
+    // Check if node exists
+    for (uint16_t idx = 0; idx < scene_nodes_count; idx++) {
+        if (scene_nodes[idx].room_id == room_id && 
+            scene_nodes[idx].module_id == module_id && 
+            scene_nodes[idx].device_id == device_id) {
+                printf("Already Exists g_id:%d  s_id:%d\n", scene_nodes[scene_idx].group_id, scene_nodes[scene_idx].scene_id);
+												
+            // Node already exists, return existing index
+            return idx;
+        }
+    }
+    
+    // Create new node with next available IDs
+    uint16_t idx = scene_nodes_count;
+    if(scene_nodes_count > 0){
+        idx = scene_nodes_count - 1;
+    }
+    scene_nodes[idx].room_id = room_id;
+    scene_nodes[idx].module_id = module_id;
+    scene_nodes[idx].device_id = device_id;
+    if (scene_nodes[idx].scene_id < 255) {
+        scene_nodes[idx].scene_id++;
+    } else{
+        scene_nodes[idx].scene_id = 1; // Reset to 1 if overflow
+    }
+    scene_nodes[idx].group_id++;  
+    scene_nodes_count++;
 
-//     err = nvs_get_u16(handle, "last_group_id", group_id);
-//     if (err == ESP_ERR_NVS_NOT_FOUND) {
-//         *group_id = 0;
-//         err = ESP_OK;
-//     } else if (err != ESP_OK) {
-//         return err;
-//     }
-//     err = nvs_get_u8(handle, "last_scene_id", scene_id);
-//     if (err == ESP_ERR_NVS_NOT_FOUND) {
-//         *scene_id = 0;
-//         err = ESP_OK;
-//     }
-//     nvs_close(nvs_handle);
-//     return err;
-// }
-
-// esp_err_t nvs_set_last_ids(uint16_t group_id, uint8_t scene_id)
-// {
-//     esp_err_t err = nvs_open("storage", NVS_READWRITE, &nvs_handle1);
-//     if (err != ESP_OK) return err;
-
-//     err = nvs_set_u16(handle, "last_group_id", group_id);
-//     if (err != ESP_OK) return err;
-//     err = nvs_set_u8(handle, "last_scene_id", scene_id);
-//     if (err != ESP_OK) return err;
-//     nvs_commit(handle);
-//     nvs_close(nvs_handle);
-//     return err;    
-// }
-
-
-
+    printf("Newly create g_id:%d  s_id:%d  cnts:%d\n", scene_nodes[scene_idx].group_id, scene_nodes[scene_idx].scene_id, scene_nodes_count);
+												
+    store_scene_nodes();
+    return idx;
+}
 
