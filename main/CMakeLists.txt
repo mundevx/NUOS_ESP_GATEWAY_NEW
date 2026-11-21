@@ -1,21 +1,10 @@
-idf_component_register(SRCS  "nuos_zigbee_scene_commands.c" "nuos_zigbee_group_commands.c" "esp_zigbee_gateway.c"
-							"nuos_nvs.c"
-							"http_server.c"
-							"switch_driver.c"
-							"zigbee_2_uart.cpp"
-                            "frame_enc_dec.cpp"
-                            "XBee.cpp"
-                            "nuos_zigbee_group_commands.c"
-                            "nuos_zigbee_scene_commands.c"
-                    INCLUDE_DIRS ".")
-
-idf_build_get_property(python PYTHON)
-if(CONFIG_ZIGBEE_GW_AUTO_UPDATE_RCP)
-    add_custom_target(rcp_image_generation ALL
-    COMMAND ${python} ${CMAKE_CURRENT_SOURCE_DIR}/../create_ota_image.py  
-    --rcp-build-dir ${IDF_PATH}/examples/openthread/ot_rcp/build
-    --target-file ${CMAKE_CURRENT_BINARY_DIR}/spiffs_image/ot_rcp_0/rcp_image
-    )
-    spiffs_create_partition_image(rcp_fw ${CMAKE_CURRENT_BINARY_DIR}/spiffs_image FLASH_IN_PROJECT
-                              DEPENDS rcp_image_generation)
-endif()
+idf_component_register(SRCS         
+        "esp_zigbee_gateway.c"
+        "zigbee_uart_process.c"
+        "nuos_uart_protocol.c"
+        "nuos_nvs.c"
+        "switch_driver.c"
+	"nuos_scene_engine.c"
+        "zigbee_device_classifier.c"
+                    INCLUDE_DIRS "."
+                    REQUIRES json mbedtls esp_timer driver nvs_flash)

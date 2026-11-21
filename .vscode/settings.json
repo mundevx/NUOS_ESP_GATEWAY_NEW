@@ -1,12 +1,10 @@
 {
-    "idf.portWin": "COM5",
+    "idf.portWin": "COM18",
     "idf.openOcdConfigs": [
-        "board/esp32h2-ftdi.cfg"
+        "board/esp32h2-builtin.cfg"
     ],
     "idf.customExtraVars": {
-        "OPENOCD_SCRIPTS": "c:\\esp\\esp-zigbee-sdk\\tools\\openocd-esp32\\v0.12.0-esp32-20230921/openocd-esp32/share/openocd/scripts",
         "IDF_CCACHE_ENABLE": "1",
-        "ESP_ROM_ELF_DIR": "c:\\esp\\esp-zigbee-sdk\\tools\\esp-rom-elfs\\20230320/",
         "IDF_TARGET": "esp32h2"
     },
     "idf.flashType": "UART",
@@ -44,5 +42,12 @@
     "idf.espIdfPathWin": "C:\\Users\\procu\\esp\\v5.5\\esp-idf",
     "idf.toolsPathWin": "c:\\esp\\esp-zigbee-sdk",
     "idf.pythonInstallPath": "c:\\esp\\esp-zigbee-sdk\\tools\\idf-python\\3.11.2\\python.exe",
-    "idf.currentSetup": "C:\\Users\\procu\\esp\\v5.5\\esp-idf"
+    "idf.currentSetup": "C:\\Users\\procu\\esp\\v5.5\\esp-idf",
+    "idf.port": "COM6",
+    "clangd.path": "C:\\Users\\procu\\.espressif\\tools\\esp-clang\\esp-19.1.2_20250312\\esp-clang\\bin\\clangd.exe",
+    "clangd.arguments": [
+      "--background-index",
+      "--query-driver=**",
+      "--compile-commands-dir=c:\\esp\\esp-zigbee-sdk\\examples\\esp_zigbee_HA_sample\\esp_zigbee_gateway_new\\build"
+    ]
 }

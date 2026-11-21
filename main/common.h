@@ -7,13 +7,15 @@
 #define _NUOS_COMMON_
 
 #define TASK_PRIORITY_ZB_MAIN  			                5
+#define TASK_PRIORITY_SWITCH_PRESS		                10
 #define TASK_PRIORITY_ZB_FIND_NODES  	                22
 #define TASK_PRIORITY_ZB_COMMISSIONING	                18
-#define TASK_PRIORITY_ZB_SEND_CMD		                15
+#define TASK_PRIORITY_ZB_SEND_CMD		                11
 #define TASK_PRIORITY_NVS_SAVE			                20
-#define TASK_PRIORITY_UART_EVT			                11
-#define TASK_PRIORITY_UART_PROCESS                      8
-#define TASK_PRIORITY_UART_RXD                          11
+
+#define TASK_PRIORITY_UART_PROCESS                      14
+#define TASK_PRIORITY_UART_TX                           12
+#define TASK_PRIORITY_UART_RXD                          9
 #define TASK_PRIORITY_XBEE_TASK                         16
 #define TASK_PRIORITY_TIMEOUT_TASK                      19
 
@@ -22,7 +24,7 @@
 
 #define MAX_SWITCHES_TO_CONTROL    					    2
 #define MAX_LOAD_TO_CONTROL    						    1
-#define ZIGBEE_NW_REMAIN_OPEN_IN_SECS                   60
+#define ZIGBEE_NW_REMAIN_OPEN_IN_SECS                   120
 
 
 #ifdef _DECLARE_MAIN_
@@ -43,8 +45,8 @@
 
     uint16_t find_device_type(uint8_t nodeindex, uint8_t epindex);
     uint8_t get_total_endpoints(uint8_t nodeindex);
-    void nuos_start_commissioning();
-    void nuos_stop_commissioning();
+   // void nuos_start_commissioning();
+
 
 
     //////////////////////////
@@ -57,19 +59,33 @@
     bool lock_nvs_save									= false;
     void read_device_info();
     void set_commissioning_task(void* arg) ;
+    
     void send_serial(const char* data);
     void send_uart_command(node_module_t *node, uint8_t ep, const char *cmd, uint8_t val);
     void gateway_leave_device(uint16_t device_short_addr, esp_zb_ieee_addr_t device_ieee_addr, uint8_t rejoin);
+    esp_err_t esp_zigbee_read_manuf_code_and_model_id(void* device_void);
+    uint8_t map_1000_to_255(uint16_t value16);
+    uint16_t map_255_to_1000(uint8_t value8);
+
+    bool data_from_uart[120] = {0};
+    bool level_from_uart[120] = {0};
+    bool color_from_uart[120] = {0};
+    bool uart_frame_rcvd = false;
+    void turn_on_commissioning_led_switch();
+     
     #ifdef __cplusplus
     }
     #endif
+   
+    void nuos_stop_commissioning();
     // device_scene_handle_t  scene_data_t[SCENE_ARRAY_SIZE];
-    bool esp_zb_cmd_sent_flag = false;
+    //bool esp_zb_cmd_sent_flag = false;
     node_mapping_t scene_nodes[MAX_SCENE_NODES];
     uint16_t scene_nodes_count = 0;
     uint16_t scene_idx = 0;
+   
 #else
-
+   
     #ifdef __cplusplus
     extern "C" {
     #endif
@@ -85,10 +101,10 @@
     extern void nuos_update_scene_add_cmd(uint8_t ep_i, uint16_t short_addr, uint8_t scene_id, uint16_t group_id);
     extern uint16_t find_device_type(uint8_t nodeindex, uint8_t epindex);
     extern uint8_t get_total_endpoints(uint8_t nodeindex);
-    extern void nuos_start_commissioning();
+    extern void nuos_start_commissioning(uint16_t timeout_seconds);
     extern void nuos_stop_commissioning();
     extern void gateway_leave_device(uint16_t device_short_addr, esp_zb_ieee_addr_t device_ieee_addr, uint8_t rejoin);
-
+    extern esp_err_t esp_zigbee_read_manuf_code_and_model_id(void* device_void);
     //////////////////////////
 
     extern void write_custom_cluster_attr(uint16_t cluster_id, uint8_t custom_cmd_id, uint16_t dst_short_addr, uint8_t dst_ep, uint8_t custom_value);
@@ -103,25 +119,35 @@
     extern void read_device_info();
     // extern void nuos_zb_leave_device(uint16_t module_id, uint16_t did);
     extern void zigbee_cluster_fan_control_attr_update(uint8_t node_i, uint8_t ep_i, uint8_t speed);
-    extern void zigbee_cluster_thermostat_attr_update(uint8_t node_i, uint8_t ep_i, uint8_t temp);
+    extern void zigbee_cluster_thermostat_temp_attr_update(uint8_t node_i, uint8_t ep_i, uint8_t temp);
     extern bool is_fan_control(uint8_t nodeindex, uint8_t epindex);
     extern bool is_thermostat_control(uint8_t nodeindex, uint8_t epindex);
+    extern uint8_t fan_control_type(uint8_t nodeindex, uint8_t epindex);
     extern void nuos_update_curtain_cluster(uint8_t node_i, uint8_t ep_i, uint8_t curtain_state);
     extern void nuos_send_window_covering_command(uint8_t node_i, uint8_t ep_i, uint8_t command);
+    extern void nuos_send_window_covering_lift_percent(uint8_t node_i, uint8_t ep_i, uint8_t percent);
     extern void send_serial(const char* data);
     extern void send_uart_command(node_module_t *node, uint8_t ep, const char *cmd, uint8_t val);
 
     extern void read_device_info();
     extern void set_commissioning_task(void* arg) ;
+    extern void nuos_update_cct_color_cluster(uint8_t node_i, uint8_t ep_i, uint8_t level);
+    extern void nuos_update_cct_level_cluster(uint8_t node_i, uint8_t ep_i, uint8_t level);
+    extern bool data_from_uart[120];
+    extern bool level_from_uart[120];
+    extern bool color_from_uart[120];
+    extern bool uart_frame_rcvd;
+    extern void turn_on_commissioning_led_switch(); 
     #ifdef __cplusplus
     }
     #endif
 
     // extern device_scene_handle_t  scene_data_t[SCENE_ARRAY_SIZE];
-    extern bool esp_zb_cmd_sent_flag;
+    //extern bool esp_zb_cmd_sent_flag;
     extern node_mapping_t scene_nodes[MAX_SCENE_NODES];
     extern uint16_t scene_nodes_count;
     extern uint16_t scene_idx;
+    
 #endif
 
 enum DEVICE_TYPE

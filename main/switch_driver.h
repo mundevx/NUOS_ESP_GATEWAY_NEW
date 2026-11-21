@@ -29,6 +29,10 @@ extern "C" {
 */
 #define GPIO_INPUT_LEVEL_ON     0
 
+/* Hold either individual provisioning button for 5 seconds. */
+#define SINGLE_BUTTON_PROVISIONING_LONG_PRESS_MS  5000UL
+#define ZIGBEE_FORMATION_LONG_PRESS_MS            5000UL
+
 #define ESP_INTR_FLAG_DEFAULT   0
 
 #define PAIR_SIZE(TYPE_STR_PAIR) (sizeof(TYPE_STR_PAIR) / sizeof(TYPE_STR_PAIR[0]))

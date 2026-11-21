@@ -17,6 +17,7 @@
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include "switch_driver.h"
+#include "nuos_uart_protocol.h"
 #include "esp_timer.h"
 #include "esp_zigbee_core.h"
 /**
@@ -138,71 +139,108 @@ static void switch_driver_button_detected(void *arg)
 {
     gpio_num_t io_num = GPIO_NUM_NC;
     switch_func_pair_t button_func_pair;
-    static switch_state_t switch_state = SWITCH_IDLE;
+    switch_state_t switch_state = SWITCH_IDLE;
     bool evt_flag = false;
-    uint32_t press_duration = 0, last_press_time = 0;
+    uint32_t press_duration = 0;
+    uint32_t last_press_time = 0;
     uint16_t total_press_in_secs = 0;
+    bool single_button_provisioning_triggered = false;
 
     for (;;) {
-        /* check if there is any queue received, if yes read out the button_func_pair */
         if (xQueueReceive(gpio_evt_queue, &button_func_pair, portMAX_DELAY)) {
-            io_num =  button_func_pair.pin;
-            //switch_driver_gpios_intr_enabled(false);
+            io_num = button_func_pair.pin;
             evt_flag = true;
+            switch_state = SWITCH_IDLE;
             two_switch_pressed_flag = false;
+            single_button_provisioning_triggered = false;
             initTwoSwitchPressedPins();
         }
+
         while (evt_flag) {
             bool value = gpio_get_level(io_num);
-            uint32_t current_time = esp_timer_get_time() / 1000; // Time in milliseconds
+            uint32_t current_time = esp_timer_get_time() / 1000U;
+
             switch (switch_state) {
             case SWITCH_IDLE:
-                switch_state = (value == GPIO_INPUT_LEVEL_ON) ? SWITCH_PRESS_DETECTED : SWITCH_IDLE;
-                last_press_time = current_time;
-                break;
-            case SWITCH_PRESS_DETECTED:
-                switch_state = (value == GPIO_INPUT_LEVEL_ON) ? SWITCH_PRESS_DETECTED : SWITCH_RELEASE_DETECTED;
-                press_duration = current_time - last_press_time;
-                if (press_duration > 1000) {        // Long press threshold (e.g., 1000ms)
-                    if(switch_state == SWITCH_PRESS_DETECTED){
-                        if(!two_switch_pressed_flag){
-        					if(IdentifyTwoSwitchPressed() >= 2) {
-        						two_switch_pressed_flag = true;
-        						printf("two switch pressed!!\n");
-        					}
-                        }
-                        total_press_in_secs++;
-                        vTaskDelay(pdMS_TO_TICKS(1000));
-                    }
+                if (value == GPIO_INPUT_LEVEL_ON) {
+                    switch_state = SWITCH_PRESS_DETECTED;
+                    last_press_time = current_time;
+                    press_duration = 0;
+                    total_press_in_secs = 0;
+                    single_button_provisioning_triggered = false;
                 }
-
                 break;
+
+            case SWITCH_PRESS_DETECTED:
+                if (value == GPIO_INPUT_LEVEL_ON) {
+                    press_duration = current_time - last_press_time;
+
+                    /* Preserve existing two-button Zigbee factory reset /
+                     * commissioning behavior. */
+                    if (!two_switch_pressed_flag && IdentifyTwoSwitchPressed() >= 2) {
+                        two_switch_pressed_flag = true;
+                        printf("two switch pressed!!\n");
+                    }
+
+                    if (two_switch_pressed_flag &&
+                        press_duration >= ZIGBEE_FORMATION_LONG_PRESS_MS &&
+                        !single_button_provisioning_triggered) {
+                        printf("BOTH BUTTONS LONG PRESS 5s -> START ZIGBEE FORMATION\n");
+                        turn_on_commissioning_led_switch();
+                        nuos_start_commissioning(120);
+                        single_button_provisioning_triggered = true;
+                    }
+
+                    /* Single-button provisioning mode selection.
+                     * Button 1 = Wi-Fi, Button 2 = BLE. */
+                    if (!two_switch_pressed_flag &&
+                        !single_button_provisioning_triggered &&
+                        press_duration >= SINGLE_BUTTON_PROVISIONING_LONG_PRESS_MS) {
+
+                        if (io_num == gpio_touch_btn_pins[0]) {
+                            printf("BUTTON 1 LONG PRESS 5s -> WIFI PROVISIONING\n");
+                            uart_send_gateway_provisioning_event("wifi");
+                            single_button_provisioning_triggered = true;
+                        } else if (io_num == gpio_touch_btn_pins[1]) {
+                            printf("BUTTON 2 LONG PRESS 5s -> BLE COMMISSIONING (GPIO=%d)\n", (int)io_num);
+                            uart_send_gateway_provisioning_event("ble");
+                            single_button_provisioning_triggered = true;
+                        }
+                    }
+
+                    vTaskDelay(pdMS_TO_TICKS(20));
+                } else {
+                    switch_state = SWITCH_RELEASE_DETECTED;
+                }
+                break;
+
             case SWITCH_RELEASE_DETECTED:
                 printf("SWITCH_RELEASE_DETECTED\n");
                 switch_state = SWITCH_IDLE;
-                /* callback to button_handler */
-                (*func_ptr)(&button_func_pair);
+
+                /* A provisioning long press consumes the release. */
+                if (!single_button_provisioning_triggered) {
+                    (*func_ptr)(&button_func_pair);
+                }
                 break;
+
             default:
+                switch_state = SWITCH_IDLE;
                 break;
             }
+
             if (switch_state == SWITCH_IDLE) {
-            	actionOnTwoSwitchPressed(total_press_in_secs);
+                actionOnTwoSwitchPressed(total_press_in_secs);
                 switch_driver_gpios_intr_enabled(true);
                 evt_flag = false;
                 break;
             }
-            vTaskDelay(10 / portTICK_PERIOD_MS);
+
+            vTaskDelay(pdMS_TO_TICKS(10));
         }
     }
 }
 
-/**
- * @brief init GPIO configuration as well as isr
- *
- * @param button_func_pair      pointer of the button pair.
- * @param button_num            number of button pair.
- */
 static bool switch_driver_gpio_init(switch_func_pair_t *button_func_pair, uint8_t button_num)
 {
     gpio_config_t io_conf = {};
@@ -236,6 +274,7 @@ static bool switch_driver_gpio_init(switch_func_pair_t *button_func_pair, uint8_
     for (int i = 0; i < button_num; ++i) {
         gpio_isr_handler_add((button_func_pair + i)->pin, gpio_isr_handler, (void *) (button_func_pair + i));
     }
+
     return true;
 }
 

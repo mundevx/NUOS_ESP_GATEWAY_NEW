@@ -1,0 +1,14 @@
+NUOS H2 UART button-event TX diagnostics R10
+
+Changes:
+- `sendFrame()` reports UART write/wait errors when sending provisioning events instead of logging 'sent' unconditionally.
+- Event payload includes schema and pressDurationSec=5.
+- H2 prints the GPIO used for the button-2 BLE long-press action.
+
+Expected H2 serial log after holding button 2 for 5 seconds:
+  BUTTON 2 LONG PRESS 5s -> BLE COMMISSIONING (GPIO=...)
+  Gateway provisioning event TX result=ESP_OK type=0x04 seq=0 ... mode=ble ...
+
+If those H2 logs are absent, check the actual button input mapping/interrupt handling. If present but C3's [UART RX DIAG] totalBytes does not increase when the event is transmitted, check H2 TX GPIO24 -> C3 RX GPIO4, common GND, and make sure C3 hardware UART1 is RX=GPIO4/TX=GPIO5. The C3 diagnostic is designed to distinguish missing UART bytes from malformed frames.
+
+No physical wire or button can be verified from source alone; build and test on hardware before deployment.

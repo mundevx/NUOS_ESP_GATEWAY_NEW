@@ -1,0 +1,3835 @@
+/*
+ * nuos_uart_protocol.c
+ *
+ * ESP32-H2 side of the NUOS Zigbee <-> ESP32-C3 UART protocol.
+ *
+ * UART0 is the binary link to the ESP32-C3 on the existing H2 GPIO24 TX /
+ * GPIO23 RX pins. ESP-IDF console output MUST be configured for the native
+ * USB Serial/JTAG controller (not UART0), so log text never enters this link.
+ * Do not connect a USB-UART bridge TX/RX to UART0 while the C3 is attached.
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/semphr.h"
+
+#include "driver/uart.h"
+#include "driver/gpio.h"
+
+#include "esp_log.h"
+#include "esp_err.h"
+#include "esp_heap_caps.h"
+#include "nvs.h"
+
+#include "cJSON.h"
+#include "esp_zigbee_type.h"
+#include "esp_zigbee_core.h"
+#include "esp_zigbee_gateway.h"
+
+#include "common.h"
+#include "esp_zigbee_type.h"
+#include "nuos_nvs.h"
+#include "zigbee_uart_process.h"
+
+#include "nuos_uart_protocol.h"
+#include "led_strip.h"
+#include "led_strip_rmt.h"
+#include "zigbee_device_classifier.h"
+
+#define NVS_NAMESPACE "zb_storage"
+
+extern node_module_t device_array[MAX_DEVICES];
+extern uint16_t devices_count;
+
+#define UART_PORT_NUM       UART_NUM_0
+#define UART_BAUD_RATE      115200
+
+// Existing physical UART0 wiring (unchanged):
+// C3 TX GPIO5 -> H2 UART0 RX GPIO23
+// C3 RX GPIO4 <- H2 UART0 TX GPIO24
+// Do not call uart_set_pin(): this project uses the existing UART0 pin routing.
+#define UART_RX_BUFFER_SIZE 4096
+#define UART_TX_BUFFER_SIZE 4096
+#define UART_BUF_SIZE       4096
+
+static const char *TAG = "NUOS_UART";
+
+// Single WS2812 diagnostic LED on GPIO8. This is diagnostic only and does
+// not alter the UART protocol or payloads.
+#define NUOS_UART_STATUS_LED_GPIO 8
+static led_strip_handle_t nuos_uart_status_led = NULL;
+static uint32_t nuos_uart_led_status_color = 0;
+static TickType_t nuos_uart_led_activity_until = 0;
+
+static void nuos_uart_led_set(uint8_t r, uint8_t g, uint8_t b)
+{
+    if (!nuos_uart_status_led) return;
+    nuos_uart_led_status_color = ((uint32_t)r << 16) | ((uint32_t)g << 8) | b;
+    led_strip_set_pixel(nuos_uart_status_led, 0, r, g, b);
+    led_strip_refresh(nuos_uart_status_led);
+}
+
+static void nuos_uart_led_activity(uint8_t r, uint8_t g, uint8_t b, uint32_t ms)
+{
+    if (!nuos_uart_status_led) return;
+    led_strip_set_pixel(nuos_uart_status_led, 0, r, g, b);
+    led_strip_refresh(nuos_uart_status_led);
+    nuos_uart_led_activity_until = xTaskGetTickCount() + pdMS_TO_TICKS(ms);
+}
+
+static void nuos_uart_led_restore(void)
+{
+    if (!nuos_uart_status_led || nuos_uart_led_activity_until == 0) return;
+    if ((int32_t)(xTaskGetTickCount() - nuos_uart_led_activity_until) < 0) return;
+
+    nuos_uart_led_activity_until = 0;
+    uint8_t r = (uint8_t)(nuos_uart_led_status_color >> 16);
+    uint8_t g = (uint8_t)(nuos_uart_led_status_color >> 8);
+    uint8_t b = (uint8_t)nuos_uart_led_status_color;
+    led_strip_set_pixel(nuos_uart_status_led, 0, r, g, b);
+    led_strip_refresh(nuos_uart_status_led);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Gateway RGB LED status/event indication                                    */
+/* -------------------------------------------------------------------------- */
+/* The LED is physically on the H2 (GPIO8). C3 Wi-Fi/BLE state is therefore
+ * forwarded over the existing UART as status. No Wi-Fi/BLE implementation is
+ * added to H2. */
+typedef enum {
+    NUOS_RGB_BOOT = 0,
+    NUOS_RGB_BLE_COMMISSIONING,
+    NUOS_RGB_BLE_CONNECTED,
+    NUOS_RGB_WIFI_STA_CONNECTING,
+    NUOS_RGB_WIFI_STA_CONNECTED,
+    NUOS_RGB_WIFI_AP_MODE,
+    NUOS_RGB_ZIGBEE_STARTING,
+    NUOS_RGB_ZIGBEE_JOINING,
+    NUOS_RGB_NORMAL,
+    NUOS_RGB_ERROR
+} nuos_rgb_status_t;
+
+static nuos_rgb_status_t nuos_rgb_status = NUOS_RGB_BOOT;
+
+static void nuos_uart_led_apply_status_color(nuos_rgb_status_t state)
+{
+    switch (state) {
+    case NUOS_RGB_BLE_COMMISSIONING:       nuos_uart_led_set(0, 0, 150); break;       /* blue */
+    case NUOS_RGB_BLE_CONNECTED:           nuos_uart_led_set(0, 150, 150); break;     /* cyan */
+    case NUOS_RGB_WIFI_STA_CONNECTING:     nuos_uart_led_set(180, 120, 0); break;     /* yellow */
+    case NUOS_RGB_WIFI_STA_CONNECTED:      nuos_uart_led_set(0, 150, 0); break;       /* green */
+    case NUOS_RGB_WIFI_AP_MODE:            nuos_uart_led_set(120, 0, 150); break;     /* purple */
+    case NUOS_RGB_ZIGBEE_STARTING:         nuos_uart_led_set(0, 0, 150); break;       /* blue */
+    case NUOS_RGB_ZIGBEE_JOINING:          nuos_uart_led_set(150, 0, 150); break;     /* magenta */
+    case NUOS_RGB_NORMAL:                  nuos_uart_led_set(0, 150, 150); break;     /* cyan */
+    case NUOS_RGB_ERROR:                   nuos_uart_led_set(150, 0, 0); break;       /* red */
+    case NUOS_RGB_BOOT:
+    default:                               nuos_uart_led_set(100, 100, 100); break;   /* white */
+    }
+    nuos_rgb_status = state;
+}
+
+static bool nuos_uart_led_status_from_string(const char *state)
+{
+    if (!state) return false;
+    if (!strcmp(state, "boot"))               { nuos_uart_led_apply_status_color(NUOS_RGB_BOOT); return true; }
+    if (!strcmp(state, "ble_commissioning"))  { nuos_uart_led_apply_status_color(NUOS_RGB_BLE_COMMISSIONING); return true; }
+    if (!strcmp(state, "ble_connected"))      { nuos_uart_led_apply_status_color(NUOS_RGB_BLE_CONNECTED); return true; }
+    if (!strcmp(state, "wifi_sta_connecting")){ nuos_uart_led_apply_status_color(NUOS_RGB_WIFI_STA_CONNECTING); return true; }
+    if (!strcmp(state, "wifi_sta_connected")) { nuos_uart_led_apply_status_color(NUOS_RGB_WIFI_STA_CONNECTED); return true; }
+    if (!strcmp(state, "wifi_ap_mode"))       { nuos_uart_led_apply_status_color(NUOS_RGB_WIFI_AP_MODE); return true; }
+    if (!strcmp(state, "zigbee_starting"))    { nuos_uart_led_apply_status_color(NUOS_RGB_ZIGBEE_STARTING); return true; }
+    if (!strcmp(state, "zigbee_joining"))     { nuos_uart_led_apply_status_color(NUOS_RGB_ZIGBEE_JOINING); return true; }
+    if (!strcmp(state, "normal"))             { nuos_uart_led_apply_status_color(NUOS_RGB_NORMAL); return true; }
+    if (!strcmp(state, "error"))              { nuos_uart_led_apply_status_color(NUOS_RGB_ERROR); return true; }
+    return false;
+}
+
+/* Public H2-side hooks. The Zigbee gateway source can call these for local
+ * Zigbee events without knowing anything about the LED driver. */
+void nuos_uart_led_set_status(const char *state)
+{
+    (void)nuos_uart_led_status_from_string(state);
+}
+
+void nuos_uart_led_event(const char *event)
+{
+    if (!nuos_uart_status_led || !event) return;
+
+    if (!strcmp(event, "zigbee_device_added")) {
+        nuos_uart_led_activity(0, 150, 0, 350);       /* green */
+    } else if (!strcmp(event, "zigbee_device_removed")) {
+        nuos_uart_led_activity(150, 0, 0, 350);       /* red */
+    } else if (!strcmp(event, "zigbee_control_tx")) {
+        nuos_uart_led_activity(255, 255, 255, 100);   /* white */
+    } else if (!strcmp(event, "zigbee_control_ok")) {
+        nuos_uart_led_activity(0, 255, 0, 120);       /* green */
+    } else if (!strcmp(event, "zigbee_control_error")) {
+        nuos_uart_led_activity(255, 0, 0, 250);       /* red */
+    } else if (!strcmp(event, "ble_activity")) {
+        nuos_uart_led_activity(0, 100, 255, 100);     /* blue */
+    }
+}
+
+static void nuos_uart_led_init(void)
+{
+    led_strip_config_t strip_config = {
+        .strip_gpio_num = NUOS_UART_STATUS_LED_GPIO,
+        .max_leds = 1,
+    };
+    led_strip_rmt_config_t rmt_config = {
+        .resolution_hz = 10 * 1000 * 1000,
+        .flags.with_dma = false,
+    };
+
+    esp_err_t err = led_strip_new_rmt_device(&strip_config, &rmt_config, &nuos_uart_status_led);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "WS2812 status LED init failed: %s", esp_err_to_name(err));
+        nuos_uart_status_led = NULL;
+        return;
+    }
+    led_strip_clear(nuos_uart_status_led);
+    nuos_uart_led_apply_status_color(NUOS_RGB_BOOT); // white = boot / initializing
+    ESP_LOGI(TAG, "WS2812 UART status LED initialized on GPIO%d", NUOS_UART_STATUS_LED_GPIO);
+}
+
+static SemaphoreHandle_t uart_tx_mutex = NULL;
+/* cJSON_PrintUnformatted() allocates a second, large contiguous block. On H2,
+ * the device-list cJSON tree can consume most of the heap and fragment it,
+ * causing serialization to fail even though the JSON tree was built. Use a
+ * fixed buffer and serialize in place instead. A separate mutex protects this
+ * shared buffer without recursively taking uart_tx_mutex in send_c3_frame(). */
+static SemaphoreHandle_t uart_json_mutex = NULL;
+static char uart_json_buffer[8192U + 16U];
+
+static void make_device_id(const esp_zb_ieee_addr_t ieee, char *out, size_t out_size);
+static void make_ieee_string(const esp_zb_ieee_addr_t ieee, char *out, size_t out_size);
+static const char *configuration_state(const node_module_t *device);
+
+/* Append-only JSON writer for device.list. It intentionally performs no heap
+ * allocation: cJSON trees exhausted the H2 heap on the six-device database. */
+static bool json_append_raw(char *dst, size_t cap, size_t *used, const char *src)
+{
+    if (!dst || !used || !src) return false;
+    size_t n = strlen(src);
+    if (*used + n >= cap) return false;
+    memcpy(dst + *used, src, n);
+    *used += n;
+    dst[*used] = '\0';
+    return true;
+}
+
+static bool json_append_string(char *dst, size_t cap, size_t *used, const char *src)
+{
+    if (!src) src = "";
+    if (!json_append_raw(dst, cap, used, "\"")) return false;
+    for (const unsigned char *q = (const unsigned char *)src; *q; ++q) {
+        char esc[7];
+        const char *piece = NULL;
+        switch (*q) {
+            case '"': piece = "\\\""; break;
+            case '\\': piece = "\\\\"; break;
+            case '\b': piece = "\\b"; break;
+            case '\f': piece = "\\f"; break;
+            case '\n': piece = "\\n"; break;
+            case '\r': piece = "\\r"; break;
+            case '\t': piece = "\\t"; break;
+            default:
+                if (*q < 0x20) { snprintf(esc, sizeof(esc), "\\u%04x", *q); piece = esc; }
+                else { esc[0] = (char)*q; esc[1] = '\0'; piece = esc; }
+                break;
+        }
+        if (!json_append_raw(dst, cap, used, piece)) return false;
+    }
+    return json_append_raw(dst, cap, used, "\"");
+}
+
+static bool send_device_list_static(uint16_t seq, const char *request_id)
+{
+    /* Send one bounded JSON record per device. This keeps each UART response
+     * small and lets C3 assemble lists larger than the physical frame size. */
+    uint16_t count = devices_count;
+    if (count > MAX_DEVICES) count = MAX_DEVICES;
+    bool ok = true;
+    if (uart_json_mutex != NULL) xSemaphoreTake(uart_json_mutex, portMAX_DELAY);
+
+#define JRAW(x) do { if (!json_append_raw(uart_json_buffer, sizeof(uart_json_buffer), &used, (x))) goto too_large; } while (0)
+#define JSTR(x) do { if (!json_append_string(uart_json_buffer, sizeof(uart_json_buffer), &used, (x))) goto too_large; } while (0)
+#define JNUM(x) do { char _n[24]; snprintf(_n, sizeof(_n), "%u", (unsigned)(x)); JRAW(_n); } while (0)
+
+    ESP_LOGI(TAG, "device.list: sending sequential records count=%u freeHeap=%u largestBlock=%u",
+             (unsigned)count, (unsigned)esp_get_free_heap_size(),
+             (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
+
+    for (uint16_t i = 0; i < count; ++i) {
+        const node_module_t *d = &device_array[i];
+        size_t used = 0;
+        uart_json_buffer[0] = '\0';
+        char id[40], ieee[24];
+        make_device_id(d->ieee_addr, id, sizeof(id));
+        make_ieee_string(d->ieee_addr, ieee, sizeof(ieee));
+
+        JRAW("{\"schema\":\"nuos.gateway.v2\",\"type\":\"response\",\"requestId\":");
+        JSTR(request_id ? request_id : "");
+        JRAW(",\"status\":\"item\",\"listIndex\":"); JNUM(i);
+        JRAW(",\"listCount\":"); JNUM(count);
+        JRAW(",\"data\":{\"device\":{");
+        JRAW("\"deviceId\":"); JSTR(id);
+        JRAW(",\"id\":"); JSTR(id);
+        JRAW(",\"protocol\":\"zigbee\",\"apiVersion\":"); JSTR(NUOS_API_VERSION_V2);
+        JRAW(",\"zigbee\":{\"ieeeAddress\":"); JSTR(ieee);
+        JRAW(",\"shortAddress\":"); JNUM(d->short_addr); JRAW("}");
+        JRAW(",\"manufacturer\":"); JSTR(d->manuf_name);
+        JRAW(",\"modelNumber\":"); JSTR(d->model_id);
+        JRAW(",\"model\":"); JSTR(d->model_id);
+        JRAW(",\"availability\":"); JSTR(d->is_active ? "online" : "offline");
+        JRAW(",\"configuration\":{\"state\":"); JSTR(configuration_state(d));
+        JRAW(",\"roomId\":"); JNUM(d->room_id);
+        JRAW(",\"moduleId\":"); JNUM(d->module_id);
+        JRAW(",\"roomName\":"); JSTR(d->loc_name);
+        JRAW(",\"deviceName\":"); JSTR(d->device_name); JRAW("}");
+        JRAW(",\"room\":{\"id\":"); JNUM(d->room_id);
+        JRAW(",\"name\":"); JSTR(d->loc_name); JRAW("}");
+        JRAW(",\"connectivity\":{\"state\":"); JSTR(d->is_active ? "online" : "offline"); JRAW("}");
+        JRAW(",\"endpoints\":[");
+        uint8_t ep_count = d->ep_counts;
+        if (ep_count > MAX_DEVICES_IN_MODULE) ep_count = MAX_DEVICES_IN_MODULE;
+        for (uint8_t e = 0; e < ep_count; ++e) {
+            const endpoint_t *ep = &d->endpoint[e];
+            if (e) JRAW(",");
+            JRAW("{\"endpointNumber\":"); JNUM(ep->ep);
+            JRAW(",\"id\":"); JNUM(ep->ep);
+            JRAW(",\"zigbeeDeviceType\":"); JNUM(ep->dev_type);
+            JRAW(",\"name\":"); JSTR(ep->dev_name[0] ? ep->dev_name : "Endpoint"); JRAW("}");
+        }
+        JRAW("]}}}");
+
+        ESP_LOGI(TAG, "device.list: record %u/%u bytes=%u", (unsigned)(i + 1U), (unsigned)count, (unsigned)used);
+        esp_err_t tx_err = sendFrame(UART_TYPE_RESPONSE, (uint16_t)(seq + i), uart_json_buffer);
+        if (tx_err != ESP_OK) {
+            ESP_LOGE(TAG, "device.list: record TX failed index=%u err=%s", (unsigned)i, esp_err_to_name(tx_err));
+            ok = false;
+            goto finished;
+        }
+        /* Small inter-record gap prevents continuous bursts from overrunning
+         * the peer parser while retaining order. sendFrame serializes TX. */
+        vTaskDelay(pdMS_TO_TICKS(8));
+    }
+
+    /* Explicit terminator tells C3 it can publish the assembled cache. */
+    {
+        size_t used = 0;
+        uart_json_buffer[0] = '\0';
+        JRAW("{\"schema\":\"nuos.gateway.v2\",\"type\":\"response\",\"requestId\":");
+        JSTR(request_id ? request_id : "");
+        JRAW(",\"status\":\"completed\",\"listComplete\":true,\"data\":{\"count\":");
+        JNUM(count); JRAW("}}");
+        ESP_LOGI(TAG, "device.list: sending completion marker count=%u", (unsigned)count);
+        esp_err_t tx_err = sendFrame(UART_TYPE_RESPONSE, (uint16_t)(seq + count), uart_json_buffer);
+        if (tx_err != ESP_OK) {
+            ESP_LOGE(TAG, "device.list: completion marker TX failed err=%s", esp_err_to_name(tx_err));
+            ok = false;
+        }
+    }
+
+finished:
+    if (uart_json_mutex != NULL) xSemaphoreGive(uart_json_mutex);
+#undef JRAW
+#undef JSTR
+#undef JNUM
+    return ok;
+
+too_large:
+    ESP_LOGE(TAG, "device.list: single-device JSON exceeds static buffer capacity=%u index=%u",
+             (unsigned)sizeof(uart_json_buffer), (unsigned)0);
+    ok = false;
+    goto finished;
+}
+
+/* -------------------------------------------------------------------------- */
+/* RX state machine                                                            */
+/* -------------------------------------------------------------------------- */
+
+typedef enum {
+    WAIT_SOF,
+    READ_VERSION,
+    READ_TYPE,
+    READ_SEQ_HIGH,
+    READ_SEQ_LOW,
+    READ_LEN_HIGH,
+    READ_LEN_LOW,
+    READ_PAYLOAD,
+    READ_CRC_HIGH,
+    READ_CRC_LOW
+} rx_state_t;
+
+static rx_state_t rx_state = WAIT_SOF;
+
+static uint8_t  rx_payload[UART_PROTO_MAX_PAYLOAD + 1];
+static uint8_t  rx_version;
+static uint8_t  rx_type;
+static uint8_t  rx_seq;
+static uint16_t rx_length;
+static uint16_t rx_index;
+static uint16_t rx_received_crc;
+
+/* C3 physical UART protocol (V2):
+ * 7E | LEN_H | LEN_L | TYPE | SEQ | PAYLOAD | CHECKSUM
+ * LEN = TYPE + SEQ + PAYLOAD. Bytes 7E/7D/11/13 are escaped.
+ */
+#define UART_C3_SOF                 0x7E
+#define UART_C3_ESCAPE              0x7D
+#define UART_C3_XON                 0x11
+#define UART_C3_XOFF                0x13
+#define UART_C3_MAX_PAYLOAD         512
+#define UART_C3_FRAGMENT_HEADER     9
+#define UART_C3_MAX_MESSAGE         8192
+
+static uint8_t tx_sequence = 1;
+static uint16_t tx_fragment_message_id = 1;
+static uint8_t rx_frame_type;
+static uint8_t rx_frame_seq;
+static uint8_t rx_frame_payload[UART_C3_MAX_PAYLOAD];
+static uint16_t rx_frame_length;
+static uint16_t rx_frame_index;
+static uint8_t rx_frame_sum;
+static bool rx_frame_escaped;
+static uint8_t rx_frame_state = 0; /* 0 SOF, 1 LEN_H, 2 LEN_L, 3 TYPE, 4 SEQ, 5 PAYLOAD, 6 CHECKSUM */
+static uint8_t *rx_frag_buffer = NULL;
+static size_t rx_frag_total = 0;
+static uint16_t rx_frag_message_id = 0;
+static uint16_t rx_frag_count = 0;
+static uint16_t rx_frag_next = 0;
+static uint8_t rx_frag_seq = 0;
+static uint8_t rx_frag_original_type = 0;
+
+/* UART link verification (C3 -> H2 data path).
+ * This intentionally reports LINK CONNECTED only after H2 receives a valid
+ * C3 protocol frame. It therefore verifies the actual RX data path, not just
+ * that UART0 was initialized.
+ */
+static volatile bool c3_uart_link_connected = false;
+static volatile TickType_t c3_uart_last_rx_tick = 0;
+static bool c3_uart_link_reported = false;
+
+/* -------------------------------------------------------------------------- */
+/* Helpers                                                                     */
+/* -------------------------------------------------------------------------- */
+
+// cJSON *get_command_endpoint_json(cJSON *root);
+
+static uint16_t crc16_ccitt(const uint8_t *data, uint16_t length)
+{
+    uint16_t crc = 0xFFFF;
+
+    for (uint16_t i = 0; i < length; i++) {
+        crc ^= ((uint16_t)data[i] << 8);
+
+        for (uint8_t j = 0; j < 8; j++) {
+            if (crc & 0x8000)
+                crc = (uint16_t)((crc << 1) ^ 0x1021);
+            else
+                crc <<= 1;
+        }
+    }
+
+    return crc;
+}
+
+static void make_device_id(const esp_zb_ieee_addr_t ieee,
+                           char *out, size_t out_size)
+{
+    snprintf(out, out_size,
+             "NUOS_%02X%02X%02X%02X%02X%02X%02X%02X",
+             ieee[0], ieee[1], ieee[2], ieee[3],
+             ieee[4], ieee[5], ieee[6], ieee[7]);
+}
+
+static void make_ieee_string(const esp_zb_ieee_addr_t ieee,
+                             char *out, size_t out_size)
+{
+    snprintf(out, out_size,
+             "%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X",
+             ieee[0], ieee[1], ieee[2], ieee[3],
+             ieee[4], ieee[5], ieee[6], ieee[7]);
+}
+
+/*
+ * Room/module IDs are metadata assigned by C3/cloud and may remain 255
+ * when a Zigbee device is first paired. They do not determine device state.
+ */
+static bool device_is_configured(const node_module_t *device)
+{
+    if (device == NULL) {
+        return false;
+    }
+
+    /* Room/module IDs are metadata. 255 means not assigned yet; it must
+     * never prevent Zigbee discovery, binding, reporting, or control. */
+    return (device->room_id != 255 && device->module_id != 255);
+}
+
+static const char *configuration_state(const node_module_t *device)
+{
+    return device_is_configured(device) ? "configured" : "unconfigured";
+}
+
+static int find_device_by_ieee(const esp_zb_ieee_addr_t ieee)
+{
+    for (uint16_t i = 0; i < devices_count; i++) {
+        if (memcmp(device_array[i].ieee_addr,
+                   ieee,
+                   sizeof(esp_zb_ieee_addr_t)) == 0) {
+            return (int)i;
+        }
+    }
+
+    return -1;
+}
+
+static int find_device_by_device_id(const char *device_id)
+{
+    if (device_id == NULL)
+        return -1;
+
+    for (uint16_t i = 0; i < devices_count; i++) {
+        char id[40];
+
+        make_device_id(device_array[i].ieee_addr,
+                       id, sizeof(id));
+
+        if (strcmp(id, device_id) == 0)
+            return (int)i;
+    }
+
+    return -1;
+}
+
+static int find_endpoint_index(const node_module_t *device,
+                               uint8_t endpoint)
+{
+    if (device == NULL)
+        return -1;
+
+    for (uint8_t i = 0;
+         i < device->ep_counts &&
+         i < MAX_DEVICES_IN_MODULE;
+         i++) {
+        if (device->endpoint[i].ep == endpoint)
+            return (int)i;
+    }
+
+    return -1;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Device JSON                                                                  */
+/* -------------------------------------------------------------------------- */
+
+static void add_endpoint_capabilities(cJSON *endpoint_json,
+                                       const endpoint_t *ep,
+                                       const node_module_t *device)
+{
+    device_capability_t cap;
+
+    classify_zigbee_endpoint(
+        ep->dev_type,
+        ep->cluster_id,
+        ep->cluster_counts,
+        device->manuf_name,
+        device->model_id,
+        &cap
+    );
+
+    cJSON_AddStringToObject(
+        endpoint_json,
+        "deviceType",
+        cap.device_type
+    );
+
+    cJSON *capabilities = cJSON_CreateObject();
+
+    if (capabilities == NULL)
+        return;
+
+    cJSON_AddBoolToObject(capabilities, "power", cap.power);
+    cJSON_AddBoolToObject(capabilities, "brightness", cap.brightness);
+    cJSON_AddBoolToObject(capabilities, "color", cap.color);
+    cJSON_AddBoolToObject(capabilities, "colorTemperature",
+                          cap.color_temperature);
+    cJSON_AddBoolToObject(capabilities, "curtain", cap.curtain);
+    cJSON_AddBoolToObject(capabilities, "fan", cap.fan);
+    cJSON_AddBoolToObject(capabilities, "thermostat", cap.thermostat);
+    cJSON_AddBoolToObject(capabilities, "temperature", cap.temperature);
+    cJSON_AddBoolToObject(capabilities, "humidity", cap.humidity);
+    cJSON_AddBoolToObject(capabilities, "occupancy", cap.occupancy);
+    cJSON_AddBoolToObject(capabilities, "illuminance", cap.illuminance);
+    cJSON_AddBoolToObject(capabilities, "gas", cap.gas);
+
+    cJSON_AddItemToObject(endpoint_json, "capabilities", capabilities);
+
+    /* Canonical NUOS V2 capability metadata. This mirrors the useful part
+     * of the industry "exposes" pattern without exposing ZCL internals. */
+    cJSON *exposes = cJSON_CreateArray();
+    if (exposes) {
+        if (cap.power) {
+            cJSON *x=cJSON_CreateObject(); cJSON_AddStringToObject(x,"property","power");
+            cJSON_AddStringToObject(x,"type","boolean"); cJSON_AddBoolToObject(x,"readable",true);
+            cJSON_AddBoolToObject(x,"writable",true); cJSON_AddItemToArray(exposes,x);
+        }
+        if (cap.brightness) {
+            cJSON *x=cJSON_CreateObject(); cJSON_AddStringToObject(x,"property","brightness");
+            cJSON_AddStringToObject(x,"type","integer"); cJSON_AddNumberToObject(x,"min",0); cJSON_AddNumberToObject(x,"max",100);
+            cJSON_AddStringToObject(x,"unit","%"); cJSON_AddBoolToObject(x,"readable",true); cJSON_AddBoolToObject(x,"writable",true); cJSON_AddItemToArray(exposes,x);
+        }
+        if (cap.color) { cJSON *x=cJSON_CreateObject(); cJSON_AddStringToObject(x,"property","color"); cJSON_AddStringToObject(x,"type","object"); cJSON_AddBoolToObject(x,"readable",true); cJSON_AddBoolToObject(x,"writable",true); cJSON_AddItemToArray(exposes,x); }
+        if (cap.color_temperature) { cJSON *x=cJSON_CreateObject(); cJSON_AddStringToObject(x,"property","color_temperature"); cJSON_AddStringToObject(x,"type","number"); cJSON_AddStringToObject(x,"unit","mired"); cJSON_AddBoolToObject(x,"readable",true); cJSON_AddBoolToObject(x,"writable",true); cJSON_AddItemToArray(exposes,x); }
+        if (cap.temperature) { cJSON *x=cJSON_CreateObject(); cJSON_AddStringToObject(x,"property","temperature"); cJSON_AddStringToObject(x,"type","number"); cJSON_AddStringToObject(x,"unit","°C"); cJSON_AddBoolToObject(x,"readable",true); cJSON_AddBoolToObject(x,"writable",false); cJSON_AddItemToArray(exposes,x); }
+        if (cap.humidity) { cJSON *x=cJSON_CreateObject(); cJSON_AddStringToObject(x,"property","humidity"); cJSON_AddStringToObject(x,"type","number"); cJSON_AddStringToObject(x,"unit","%"); cJSON_AddBoolToObject(x,"readable",true); cJSON_AddBoolToObject(x,"writable",false); cJSON_AddItemToArray(exposes,x); }
+        if (cap.occupancy) { cJSON *x=cJSON_CreateObject(); cJSON_AddStringToObject(x,"property","occupancy"); cJSON_AddStringToObject(x,"type","boolean"); cJSON_AddBoolToObject(x,"readable",true); cJSON_AddBoolToObject(x,"writable",false); cJSON_AddItemToArray(exposes,x); }
+        if (cap.illuminance) { cJSON *x=cJSON_CreateObject(); cJSON_AddStringToObject(x,"property","illuminance"); cJSON_AddStringToObject(x,"type","number"); cJSON_AddStringToObject(x,"unit","lux"); cJSON_AddBoolToObject(x,"readable",true); cJSON_AddBoolToObject(x,"writable",false); cJSON_AddItemToArray(exposes,x); }
+        if (cap.gas) { cJSON *x=cJSON_CreateObject(); cJSON_AddStringToObject(x,"property","gas"); cJSON_AddStringToObject(x,"type","boolean"); cJSON_AddBoolToObject(x,"readable",true); cJSON_AddBoolToObject(x,"writable",false); cJSON_AddItemToArray(exposes,x); }
+        cJSON_AddItemToObject(endpoint_json,"exposes",exposes);
+    }
+}
+
+static cJSON *create_endpoint_info(const node_module_t *device,
+                                   const endpoint_t *ep,
+                                   bool include_status)
+{
+    cJSON *obj = cJSON_CreateObject();
+
+    if (obj == NULL)
+        return NULL;
+
+    cJSON_AddNumberToObject(obj, "endpointNumber", ep->ep);
+    cJSON_AddNumberToObject(obj, "id", ep->ep);
+    cJSON_AddNumberToObject(obj, "zigbeeDeviceType", ep->dev_type);
+
+    cJSON_AddStringToObject(
+        obj,
+        "name",
+        ep->dev_name[0] ? ep->dev_name : "Endpoint"
+    );
+
+    add_endpoint_capabilities(obj, ep, device);
+
+    if (include_status) {
+        cJSON *reported = cJSON_CreateObject();
+
+        if (reported != NULL) {
+            cJSON *onoff = cJSON_CreateObject();
+            if (onoff != NULL) {
+                cJSON_AddBoolToObject(
+                    onoff, "on", ep->device_t.state);
+                cJSON_AddItemToObject(
+                    reported, "on_off", onoff);
+            }
+
+            cJSON *brightness = cJSON_CreateObject();
+            if (brightness != NULL) {
+                cJSON_AddNumberToObject(
+                    brightness, "brightness",
+                    ep->device_t.level);
+                cJSON_AddItemToObject(
+                    reported, "brightness", brightness);
+            }
+
+            cJSON *value = cJSON_CreateObject();
+            if (value != NULL) {
+                cJSON_AddNumberToObject(
+                    value, "value",
+                    ep->device_t.value);
+                cJSON_AddItemToObject(
+                    reported, "value", value);
+            }
+
+            cJSON_AddItemToObject(obj, "reported", reported);
+
+            cJSON *state = cJSON_CreateObject();
+            if (state) {
+                cJSON_AddBoolToObject(state, "power", ep->device_t.state);
+                cJSON_AddNumberToObject(state, "brightness", ep->device_t.level);
+                cJSON_AddNumberToObject(state, "value", ep->device_t.value);
+                cJSON_AddItemToObject(obj, "state", state);
+            }
+        }
+    }
+
+    return obj;
+}
+
+static cJSON *create_device_info(const node_module_t *device,
+                                 bool include_status)
+{
+    if (device == NULL)
+        return NULL;
+
+    cJSON *obj = cJSON_CreateObject();
+
+    if (obj == NULL)
+        return NULL;
+
+    char device_id[40];
+    char ieee[24];
+
+    make_device_id(device->ieee_addr,
+                   device_id, sizeof(device_id));
+
+    make_ieee_string(device->ieee_addr,
+                     ieee, sizeof(ieee));
+
+    cJSON_AddStringToObject(obj, "deviceId", device_id);
+    cJSON_AddStringToObject(obj, "id", device_id);
+    cJSON_AddStringToObject(obj, "protocol", "zigbee");
+    cJSON_AddStringToObject(obj, "apiVersion", NUOS_API_VERSION_V2);
+
+    cJSON *zigbee = cJSON_CreateObject();
+
+    if (zigbee != NULL) {
+        cJSON_AddStringToObject(
+            zigbee, "ieeeAddress", ieee);
+
+        cJSON_AddNumberToObject(
+            zigbee, "shortAddress",
+            device->short_addr);
+
+        cJSON_AddItemToObject(
+            obj, "zigbee", zigbee);
+    }
+
+    cJSON_AddStringToObject(
+        obj, "manufacturer",
+        device->manuf_name);
+
+    cJSON_AddStringToObject(obj, "modelNumber", device->model_id);
+    cJSON_AddStringToObject(obj, "model", device->model_id);
+    cJSON_AddStringToObject(obj, "availability", device->is_active ? "online" : "offline");
+
+    cJSON *configuration =
+        cJSON_CreateObject();
+
+    if (configuration != NULL) {
+        cJSON_AddStringToObject(
+            configuration,
+            "state",
+            configuration_state(device));
+
+        cJSON_AddNumberToObject(
+            configuration,
+            "roomId",
+            device->room_id);
+
+        cJSON_AddNumberToObject(
+            configuration,
+            "moduleId",
+            device->module_id);
+
+        cJSON_AddStringToObject(
+            configuration,
+            "roomName",
+            device->loc_name);
+
+        cJSON_AddStringToObject(
+            configuration,
+            "deviceName",
+            device->device_name);
+
+        cJSON_AddItemToObject(obj, "configuration", configuration);
+    }
+
+    cJSON *room = cJSON_CreateObject();
+    if (room != NULL) {
+        cJSON_AddNumberToObject(room, "id", device->room_id);
+        cJSON_AddStringToObject(room, "name", device->loc_name);
+        cJSON_AddItemToObject(obj, "room", room);
+    }
+
+    cJSON *connectivity =
+        cJSON_CreateObject();
+
+    if (connectivity != NULL) {
+        cJSON_AddStringToObject(
+            connectivity,
+            "state",
+            device->is_active ?
+            "online" : "offline");
+
+        cJSON_AddItemToObject(
+            obj, "connectivity",
+            connectivity);
+    }
+
+    cJSON *endpoints =
+        cJSON_CreateArray();
+
+    if (endpoints != NULL) {
+        uint8_t count = device->ep_counts;
+
+        if (count > MAX_DEVICES_IN_MODULE)
+            count = MAX_DEVICES_IN_MODULE;
+
+        for (uint8_t i = 0; i < count; i++) {
+            cJSON *ep =
+                create_endpoint_info(
+                    device,
+                    &device->endpoint[i],
+                    include_status);
+
+            if (ep != NULL)
+                cJSON_AddItemToArray(
+                    endpoints, ep);
+        }
+
+        cJSON_AddItemToObject(
+            obj, "endpoints", endpoints);
+    }
+
+    if (include_status) {
+        cJSON_AddBoolToObject(
+            obj, "active", device->is_active);
+    }
+
+    return obj;
+}
+
+/* -------------------------------------------------------------------------- */
+/* UART TX                                                                      */
+/* -------------------------------------------------------------------------- */
+
+static bool uart_needs_escape(uint8_t b)
+{
+    return b == UART_C3_SOF || b == UART_C3_ESCAPE ||
+           b == UART_C3_XON || b == UART_C3_XOFF;
+}
+
+static esp_err_t uart_write_escaped(uint8_t b)
+{
+    if (uart_needs_escape(b)) {
+        const char escape = (char)UART_C3_ESCAPE;
+        if (uart_write_bytes(UART_PORT_NUM, &escape, 1) != 1) {
+            return ESP_FAIL;
+        }
+        uint8_t escaped = (uint8_t)(b ^ 0x20U);
+        if (uart_write_bytes(UART_PORT_NUM, &escaped, 1) != 1) {
+            return ESP_FAIL;
+        }
+    } else {
+        if (uart_write_bytes(UART_PORT_NUM, &b, 1) != 1) {
+            return ESP_FAIL;
+        }
+    }
+    return ESP_OK;
+}
+
+static esp_err_t send_raw_c3_frame(uint8_t type, uint8_t seq,
+                                   const uint8_t *payload, uint16_t payload_size)
+{
+    if (payload_size > UART_C3_MAX_PAYLOAD || (payload_size && payload == NULL))
+        return ESP_ERR_INVALID_SIZE;
+
+    nuos_uart_led_activity(0, 0, 100, 45); // blue = H2 TX
+
+    uint16_t length = (uint16_t)(2U + payload_size);
+    uint8_t sum = (uint8_t)(type + seq);
+    for (uint16_t i = 0; i < payload_size; i++)
+        sum = (uint8_t)(sum + payload[i]);
+    uint8_t checksum = (uint8_t)(0xFFU - sum);
+
+    // TX serialization is owned by send_c3_frame(). Keeping the mutex at the
+    // individual-frame level allows another task to insert an event between
+    // fragments of a large response. C3 then sees a fragment sequence mismatch.
+    uint8_t sof = UART_C3_SOF;
+    if (uart_write_bytes(UART_PORT_NUM, &sof, 1) != 1) return ESP_FAIL;
+    if (uart_write_escaped((uint8_t)(length >> 8)) != ESP_OK) return ESP_FAIL;
+    if (uart_write_escaped((uint8_t)length) != ESP_OK) return ESP_FAIL;
+    if (uart_write_escaped(type) != ESP_OK) return ESP_FAIL;
+    if (uart_write_escaped(seq) != ESP_OK) return ESP_FAIL;
+    for (uint16_t i = 0; i < payload_size; i++) {
+        if (uart_write_escaped(payload[i]) != ESP_OK) return ESP_FAIL;
+    }
+    if (uart_write_escaped(checksum) != ESP_OK) return ESP_FAIL;
+    esp_err_t wait_err = uart_wait_tx_done(UART_PORT_NUM, pdMS_TO_TICKS(100));
+    return wait_err;
+}
+
+static esp_err_t send_c3_frame(uint8_t type, uint8_t seq,
+                               const uint8_t *data, size_t length)
+{
+    if (!data || length == 0 || length > UART_C3_MAX_MESSAGE)
+        return ESP_ERR_INVALID_SIZE;
+
+    // IMPORTANT: hold the TX mutex for the ENTIRE logical message.
+    // A large JSON response/event is fragmented into many physical UART
+    // frames. Another Zigbee task must not insert an event between those
+    // fragments, otherwise C3's strict reassembly (messageId/seq/index)
+    // rejects the message and the Zigbee data never reaches C3/web/cloud.
+    if (uart_tx_mutex != NULL)
+        xSemaphoreTake(uart_tx_mutex, portMAX_DELAY);
+
+    esp_err_t result = ESP_OK;
+
+    if (length <= UART_C3_MAX_PAYLOAD) {
+        result = send_raw_c3_frame(type, seq, data, (uint16_t)length);
+    } else {
+        uint16_t fragment_count = (uint16_t)(
+            (length + (UART_C3_MAX_PAYLOAD - UART_C3_FRAGMENT_HEADER) - 1U) /
+            (UART_C3_MAX_PAYLOAD - UART_C3_FRAGMENT_HEADER));
+
+        uint16_t message_id = tx_fragment_message_id++;
+        if (tx_fragment_message_id == 0)
+            tx_fragment_message_id = 1;
+
+        uint8_t fragment[UART_C3_MAX_PAYLOAD];
+        const size_t chunk_max = UART_C3_MAX_PAYLOAD - UART_C3_FRAGMENT_HEADER;
+
+        for (uint16_t index = 0; index < fragment_count; index++) {
+            size_t offset = (size_t)index * chunk_max;
+            size_t remaining = length - offset;
+            uint16_t chunk = remaining > chunk_max ?
+                             (uint16_t)chunk_max :
+                             (uint16_t)remaining;
+
+            uint8_t flags = 0;
+            if (index == 0) flags |= 0x01;
+            if (index == fragment_count - 1U) flags |= 0x02;
+
+            fragment[0] = type;
+            fragment[1] = flags;
+            fragment[2] = (uint8_t)(message_id >> 8);
+            fragment[3] = (uint8_t)message_id;
+            fragment[4] = (uint8_t)(index >> 8);
+            fragment[5] = (uint8_t)index;
+            fragment[6] = (uint8_t)(fragment_count >> 8);
+            fragment[7] = (uint8_t)fragment_count;
+            fragment[8] = 0x01;
+
+            memcpy(&fragment[UART_C3_FRAGMENT_HEADER],
+                   data + offset,
+                   chunk);
+
+            uint8_t frame_type =
+                index == 0 ? TYPE_DATA_START :
+                (index == fragment_count - 1U ? TYPE_DATA_END :
+                                                TYPE_DATA_CHUNK);
+
+            result = send_raw_c3_frame(
+                frame_type,
+                seq,
+                fragment,
+                (uint16_t)(UART_C3_FRAGMENT_HEADER + chunk));
+
+            if (result != ESP_OK)
+                break;
+
+            // Small pacing delay is retained, but the TX mutex remains held
+            // so no other H2 task can interleave a UART frame.
+            vTaskDelay(pdMS_TO_TICKS(2));
+        }
+    }
+
+    if (uart_tx_mutex != NULL)
+        xSemaphoreGive(uart_tx_mutex);
+
+    return result;
+}
+
+esp_err_t sendFrame(uint8_t type, uint16_t seq, const char *json)
+{
+    if (!json) return ESP_ERR_INVALID_ARG;
+    size_t length = strlen(json);
+    if (length == 0 || length > UART_C3_MAX_MESSAGE)
+        return ESP_ERR_INVALID_SIZE;
+    return send_c3_frame(type, (uint8_t)seq, (const uint8_t *)json, length);
+}
+
+static void send_json_frame(uint8_t type,
+                            uint16_t seq,
+                            cJSON *root)
+{
+    if (root == NULL)
+        return;
+
+    if (uart_json_mutex != NULL)
+        xSemaphoreTake(uart_json_mutex, portMAX_DELAY);
+
+    /* Avoid a second heap allocation for large responses such as device.list. */
+    bool serialized = cJSON_PrintPreallocated(
+        root, uart_json_buffer, (int)sizeof(uart_json_buffer), false);
+
+    if (!serialized) {
+        ESP_LOGE(TAG,
+                 "UART JSON serialization failed: frameType=0x%02X seq=%u freeHeap=%u largestBlock=%u bufferBytes=%u",
+                 type, (unsigned)seq,
+                 (unsigned)esp_get_free_heap_size(),
+                 (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_8BIT),
+                 (unsigned)sizeof(uart_json_buffer));
+        cJSON_Delete(root);
+        if (uart_json_mutex != NULL)
+            xSemaphoreGive(uart_json_mutex);
+        return;
+    }
+
+    size_t json_len = strlen(uart_json_buffer);
+    ESP_LOGI(TAG, "UART JSON ready: frameType=0x%02X seq=%u payloadBytes=%u freeHeap=%u",
+             type, (unsigned)seq, (unsigned)json_len,
+             (unsigned)esp_get_free_heap_size());
+
+    esp_err_t tx_err = sendFrame(type, seq, uart_json_buffer);
+    if (type == UART_TYPE_ACK || type == UART_TYPE_RESPONSE || type == UART_TYPE_ERROR) {
+        ESP_LOGI(TAG,
+                 "UART TX result=%s frameType=0x%02X seq=%u payloadBytes=%u json=%s",
+                 esp_err_to_name(tx_err), type, (unsigned)seq,
+                 (unsigned)json_len, uart_json_buffer);
+    } else if (tx_err != ESP_OK) {
+        ESP_LOGE(TAG, "UART TX failed: result=%s frameType=0x%02X seq=%u bytes=%u",
+                 esp_err_to_name(tx_err), type, (unsigned)seq,
+                 (unsigned)json_len);
+    }
+
+    cJSON_Delete(root);
+    if (uart_json_mutex != NULL)
+        xSemaphoreGive(uart_json_mutex);
+}
+
+static void send_ack(uint16_t seq,
+                     const char *command_id,
+                     const char *status)
+{
+    cJSON *root =
+        cJSON_CreateObject();
+
+    if (root == NULL)
+        return;
+
+    cJSON_AddStringToObject(root, "schema", "nuos.gateway.v2");
+    cJSON_AddStringToObject(root, "type", "ack");
+
+    if (command_id != NULL)
+        cJSON_AddStringToObject(
+            root, "requestId", command_id);
+
+    cJSON_AddStringToObject(
+        root, "status", status);
+
+    send_json_frame(
+        UART_TYPE_ACK,
+        seq,
+        root);
+}
+
+static void send_response(uint16_t seq,
+                          const char *command_id,
+                          const char *status,
+                          cJSON *data)
+{
+    cJSON *root =
+        cJSON_CreateObject();
+
+    if (root == NULL) {
+        if (data) cJSON_Delete(data);
+        return;
+    }
+
+    cJSON_AddStringToObject(root, "schema", "nuos.gateway.v2");
+    cJSON_AddStringToObject(root, "type", "response");
+
+    if (command_id != NULL)
+        cJSON_AddStringToObject(
+            root, "requestId", command_id);
+
+    cJSON_AddStringToObject(
+        root, "status", status);
+
+    if (data != NULL)
+        cJSON_AddItemToObject(
+            root, "data", data);
+
+    send_json_frame(
+        UART_TYPE_RESPONSE,
+        seq,
+        root);
+}
+
+static void send_error_response(uint16_t seq,
+                                const char *command_id,
+                                const char *code,
+                                const char *message)
+{
+    cJSON *root =
+        cJSON_CreateObject();
+
+    if (root == NULL)
+        return;
+
+    cJSON_AddStringToObject(root, "schema", "nuos.gateway.v2");
+    cJSON_AddStringToObject(root, "type", "response");
+
+    if (command_id != NULL)
+        cJSON_AddStringToObject(
+            root, "requestId", command_id);
+
+    cJSON_AddStringToObject(
+        root, "status", "failed");
+
+    cJSON *error =
+        cJSON_CreateObject();
+
+    if (error != NULL) {
+        cJSON_AddStringToObject(
+            error, "code", code ? code : "UNKNOWN");
+
+        cJSON_AddStringToObject(
+            error, "message", message ? message : "");
+
+        cJSON_AddItemToObject(
+            root, "error", error);
+    }
+
+    send_json_frame(
+        UART_TYPE_ERROR,
+        seq,
+        root);
+}
+
+/* -------------------------------------------------------------------------- */
+/* H2 -> C3 EVENTS                                                              */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Zigbee application integration:
+ *
+ * After a NEW device has been successfully added to device_array[] and
+ * saved to NVS:
+ *
+ *     uart_send_device_added_event(device_index);
+ *
+ * After an EXISTING device rejoins:
+ *
+ *     uart_send_device_rejoined_event(device_index);
+ *
+ * Before deleting/removing a device from device_array[], copy the
+ * node_module_t to a local variable, perform the Zigbee leave/remove
+ * operation, then send:
+ *
+ *     uart_send_device_removed_event(&removed_device_copy);
+ *
+ * The event builders below already generate UART_TYPE_EVENT frames.
+ */
+
+void uart_send_gateway_provisioning_event(const char *mode)
+{
+    if (mode == NULL || (strcmp(mode, "wifi") != 0 && strcmp(mode, "ble") != 0)) {
+        return;
+    }
+    if (strcmp(mode, "ble") == 0) {
+        nuos_gateway_deauthorize_session();
+    }
+
+    cJSON *root = cJSON_CreateObject();
+    if (root == NULL) {
+        return;
+    }
+
+    cJSON_AddStringToObject(root, "schema", "nuos.gateway.v2");
+    cJSON_AddStringToObject(root, "type", "event");
+    cJSON_AddStringToObject(root, "eventType", "gateway.provisioning");
+    cJSON_AddStringToObject(root, "mode", mode);
+    cJSON_AddNumberToObject(root, "pressDurationSec", 5);
+
+    char *json = cJSON_PrintUnformatted(root);
+    if (json == NULL) {
+        ESP_LOGE(TAG, "Gateway provisioning event serialization failed: mode=%s", mode);
+        cJSON_Delete(root);
+        return;
+    }
+
+    /* Log the real UART TX result. Previously send_json_frame() discarded the
+     * sendFrame() result and printed 'sent' even if the UART driver rejected TX. */
+    const uint8_t event_seq = 0;
+    esp_err_t tx_err = sendFrame(UART_TYPE_EVENT, event_seq, json);
+    ESP_LOGI(TAG,
+             "Gateway provisioning event TX result=%s type=0x%02X seq=%u bytes=%u mode=%s payload=%s",
+             esp_err_to_name(tx_err), UART_TYPE_EVENT, event_seq,
+             (unsigned)strlen(json), mode, json);
+    free(json);
+    cJSON_Delete(root);
+}
+
+void uart_send_device_added_event(uint16_t device_index)
+{
+    if (device_index >= devices_count)
+        return;
+
+    cJSON *root =
+        cJSON_CreateObject();
+
+    if (root == NULL)
+        return;
+
+    cJSON_AddStringToObject(
+        root, "type", "event");
+
+    cJSON_AddStringToObject(
+        root, "eventType", "device.added");
+
+    cJSON *device =
+        create_device_info(
+            &device_array[device_index],
+            false);
+
+    if (device != NULL)
+        cJSON_AddItemToObject(
+            root, "device", device);
+
+    send_json_frame(
+        UART_TYPE_EVENT,
+        0,
+        root);
+}
+
+void uart_send_device_removed_event(
+    const node_module_t *device)
+{
+    if (device == NULL)
+        return;
+
+    cJSON *root =
+        cJSON_CreateObject();
+
+    if (root == NULL)
+        return;
+
+    char id[40];
+    char ieee[24];
+
+    make_device_id(
+        device->ieee_addr,
+        id, sizeof(id));
+
+    make_ieee_string(
+        device->ieee_addr,
+        ieee, sizeof(ieee));
+
+    cJSON_AddStringToObject(
+        root, "type", "event");
+
+    cJSON_AddStringToObject(
+        root, "eventType",
+        "device.removed");
+
+    cJSON *d =
+        cJSON_CreateObject();
+
+    if (d != NULL) {
+        cJSON_AddStringToObject(
+            d, "deviceId", id);
+
+        cJSON_AddStringToObject(
+            d, "protocol", "zigbee");
+
+        cJSON_AddStringToObject(
+            d, "ieeeAddress", ieee);
+
+        cJSON_AddNumberToObject(
+            d, "shortAddress",
+            device->short_addr);
+
+        cJSON_AddStringToObject(
+            d, "lifecycleStatus",
+            "removed");
+
+        cJSON_AddItemToObject(
+            root, "device", d);
+    }
+
+    send_json_frame(
+        UART_TYPE_EVENT,
+        0,
+        root);
+}
+
+void uart_send_device_rejoined_event(
+    uint16_t device_index)
+{
+    if (device_index >= devices_count)
+        return;
+
+    cJSON *root =
+        cJSON_CreateObject();
+
+    if (root == NULL)
+        return;
+
+    cJSON_AddStringToObject(
+        root, "type", "event");
+
+    cJSON_AddStringToObject(
+        root, "eventType",
+        "device.rejoined");
+
+    cJSON *d =
+        create_device_info(
+            &device_array[device_index],
+            false);
+
+    if (d != NULL)
+        cJSON_AddItemToObject(
+            root, "device", d);
+
+    send_json_frame(
+        UART_TYPE_EVENT,
+        0,
+        root);
+}
+
+void uart_send_connectivity_event(
+    uint16_t device_index,
+    bool online)
+{
+    if (device_index >= devices_count)
+        return;
+
+    char id[40];
+
+    make_device_id(
+        device_array[device_index].ieee_addr,
+        id, sizeof(id));
+
+    cJSON *root =
+        cJSON_CreateObject();
+
+    if (root == NULL)
+        return;
+
+    cJSON_AddStringToObject(
+        root, "type", "event");
+
+    cJSON_AddStringToObject(
+        root, "eventType",
+        "connectivity.changed");
+
+    cJSON_AddStringToObject(
+        root, "deviceId", id);
+
+    cJSON *connectivity =
+        cJSON_CreateObject();
+
+    if (connectivity != NULL) {
+        cJSON_AddStringToObject(
+            connectivity,
+            "state",
+            online ? "online" : "offline");
+
+        cJSON_AddItemToObject(
+            root,
+            "connectivity",
+            connectivity);
+    }
+
+    send_json_frame(
+        UART_TYPE_EVENT,
+        0,
+        root);
+}
+
+void uart_send_property_changed_bool(
+    uint16_t device_index,
+    uint8_t ep,
+    const char *capability,
+    const char *property,
+    bool value)
+{
+    if (device_index >= devices_count)
+        return;
+
+    char id[40];
+
+    make_device_id(
+        device_array[device_index].ieee_addr,
+        id, sizeof(id));
+
+    cJSON *root =
+        cJSON_CreateObject();
+
+    if (root == NULL)
+        return;
+
+    cJSON_AddStringToObject(
+        root, "type", "event");
+
+    cJSON_AddStringToObject(
+        root, "eventType",
+        "property.changed");
+
+    cJSON_AddStringToObject(
+        root, "deviceId", id);
+
+    cJSON_AddNumberToObject(
+        root, "endpointNumber", ep);
+
+    cJSON_AddStringToObject(
+        root, "capability",
+        capability ? capability : "unknown");
+
+    cJSON_AddStringToObject(
+        root, "property",
+        property ? property : "value");
+
+    cJSON_AddBoolToObject(
+        root, "value", value);
+
+    send_json_frame(
+        UART_TYPE_EVENT,
+        0,
+        root);
+}
+
+void uart_send_property_changed_number(
+    uint16_t device_index,
+    uint8_t ep,
+    const char *capability,
+    const char *property,
+    double value)
+{
+    if (device_index >= devices_count)
+        return;
+
+    char id[40];
+
+    make_device_id(
+        device_array[device_index].ieee_addr,
+        id, sizeof(id));
+
+    cJSON *root =
+        cJSON_CreateObject();
+
+    if (root == NULL)
+        return;
+
+    cJSON_AddStringToObject(
+        root, "type", "event");
+
+    cJSON_AddStringToObject(
+        root, "eventType",
+        "property.changed");
+
+    cJSON_AddStringToObject(
+        root, "deviceId", id);
+
+    cJSON_AddNumberToObject(
+        root, "endpointNumber", ep);
+
+    cJSON_AddStringToObject(
+        root, "capability",
+        capability ? capability : "unknown");
+
+    cJSON_AddStringToObject(
+        root, "property",
+        property ? property : "value");
+
+    cJSON_AddNumberToObject(
+        root, "value", value);
+
+    send_json_frame(
+        UART_TYPE_EVENT,
+        0,
+        root);
+}
+
+void uart_send_attribute_changed(
+    uint16_t device_index,
+    uint8_t ep,
+    uint16_t cluster_id,
+    uint16_t attr_id,
+    const char *capability,
+    const char *property,
+    double value)
+{
+    if (device_index >= devices_count)
+        return;
+
+    char id[40];
+
+    make_device_id(
+        device_array[device_index].ieee_addr,
+        id, sizeof(id));
+
+    cJSON *root =
+        cJSON_CreateObject();
+
+    if (root == NULL)
+        return;
+
+    cJSON_AddStringToObject(
+        root, "type", "event");
+
+    cJSON_AddStringToObject(
+        root, "eventType",
+        "property.changed");
+
+    cJSON_AddStringToObject(
+        root, "deviceId", id);
+
+    cJSON_AddNumberToObject(
+        root, "endpointNumber", ep);
+
+    cJSON_AddStringToObject(
+        root, "capability",
+        capability ? capability : "zigbee_attribute");
+
+    cJSON_AddStringToObject(
+        root, "property",
+        property ? property : "value");
+
+    cJSON_AddNumberToObject(
+        root, "value", value);
+
+    /*
+     * Keep raw Zigbee information so C3/cloud can debug or support
+     * an attribute which is not yet mapped to a canonical capability.
+     */
+    cJSON_AddNumberToObject(
+        root, "clusterId", cluster_id);
+
+    cJSON_AddNumberToObject(
+        root, "attributeId", attr_id);
+
+    send_json_frame(
+        UART_TYPE_EVENT,
+        0,
+        root);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Device list/status responses                                                 */
+/* -------------------------------------------------------------------------- */
+
+static cJSON *create_device_list_data(bool unconfigured_only,
+                                      bool include_status)
+{
+    cJSON *data =
+        cJSON_CreateObject();
+
+    if (data == NULL)
+        return NULL;
+
+    cJSON *devices =
+        cJSON_CreateArray();
+
+    if (devices == NULL) {
+        cJSON_Delete(data);
+        return NULL;
+    }
+
+    uint16_t count = 0;
+
+    for (uint16_t i = 0;
+         i < devices_count;
+         i++) {
+
+        node_module_t *device =
+            &device_array[i];
+
+        if (unconfigured_only &&
+            device_is_configured(device)) {
+            continue;
+        }
+
+        cJSON *obj =
+            create_device_info(
+                device,
+                include_status);
+
+        if (obj != NULL) {
+            cJSON_AddItemToArray(
+                devices, obj);
+            count++;
+        }
+    }
+
+    cJSON_AddItemToObject(
+        data, "devices", devices);
+
+    cJSON_AddNumberToObject(
+        data, "count", count);
+
+    return data;
+}
+
+static cJSON *create_single_device_status(
+    const node_module_t *device)
+{
+    if (device == NULL)
+        return NULL;
+
+    cJSON *data =
+        cJSON_CreateObject();
+
+    if (data == NULL)
+        return NULL;
+
+    char id[40];
+
+    make_device_id(
+        device->ieee_addr,
+        id, sizeof(id));
+
+    cJSON_AddStringToObject(
+        data, "deviceId", id);
+
+    cJSON_AddStringToObject(
+        data, "connectivity",
+        device->is_active ?
+        "online" : "offline");
+
+    cJSON *endpoints =
+        cJSON_CreateArray();
+
+    if (endpoints != NULL) {
+        uint8_t count = device->ep_counts;
+
+        if (count > MAX_DEVICES_IN_MODULE)
+            count = MAX_DEVICES_IN_MODULE;
+
+        for (uint8_t i = 0; i < count; i++) {
+            cJSON *ep =
+                create_endpoint_info(
+                    device,
+                    &device->endpoint[i],
+                    true);
+
+            if (ep != NULL)
+                cJSON_AddItemToArray(
+                    endpoints, ep);
+        }
+
+        cJSON_AddItemToObject(
+            data, "endpoints", endpoints);
+    }
+
+    return data;
+}
+
+/* -------------------------------------------------------------------------- */
+/* NVS                                                                          */
+/* -------------------------------------------------------------------------- */
+
+esp_err_t uart_save_device_to_nvs(
+    uint16_t device_index)
+{
+    if (device_index >= devices_count)
+        return ESP_ERR_INVALID_ARG;
+
+    nvs_handle_t handle;
+
+    esp_err_t err =
+        nvs_open(
+            NVS_NAMESPACE,
+            NVS_READWRITE,
+            &handle);
+
+    if (err != ESP_OK)
+        return err;
+
+    char key[16];
+
+    snprintf(
+        key, sizeof(key),
+        "device_%u",
+        device_index);
+
+    err = nvs_set_blob(
+        handle,
+        key,
+        &device_array[device_index],
+        sizeof(node_module_t));
+
+    if (err == ESP_OK)
+        err = nvs_commit(handle);
+
+    nvs_close(handle);
+
+    return err;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Configure commands                                                           */
+/* -------------------------------------------------------------------------- */
+
+static esp_err_t configure_device(
+    uint16_t index,
+    cJSON *arguments)
+{
+    if (index >= devices_count ||
+        arguments == NULL)
+        return ESP_ERR_INVALID_ARG;
+
+    node_module_t *device =
+        &device_array[index];
+
+    cJSON *room_id =
+        cJSON_GetObjectItem(
+            arguments, "roomId");
+
+    cJSON *module_id =
+        cJSON_GetObjectItem(
+            arguments, "moduleId");
+
+    cJSON *room_name =
+        cJSON_GetObjectItem(
+            arguments, "roomName");
+
+    cJSON *device_name =
+        cJSON_GetObjectItem(
+            arguments, "deviceName");
+
+    if (cJSON_IsNumber(room_id))
+        device->room_id =
+            (uint8_t)room_id->valueint;
+
+    if (cJSON_IsNumber(module_id))
+        device->module_id =
+            (uint8_t)module_id->valueint;
+
+    if (cJSON_IsString(room_name)) {
+        snprintf(
+            device->loc_name,
+            sizeof(device->loc_name),
+            "%s",
+            room_name->valuestring);
+    }
+
+    if (cJSON_IsString(device_name)) {
+        snprintf(
+            device->device_name,
+            sizeof(device->device_name),
+            "%s",
+            device_name->valuestring);
+    }
+
+    return uart_save_device_to_nvs(index);
+}
+
+static esp_err_t configure_endpoint(
+    uint16_t index,
+    uint8_t endpoint,
+    cJSON *arguments)
+{
+    if (index >= devices_count ||
+        arguments == NULL)
+        return ESP_ERR_INVALID_ARG;
+
+    int ep_index =
+        find_endpoint_index(
+            &device_array[index],
+            endpoint);
+
+    if (ep_index < 0)
+        return ESP_ERR_NOT_FOUND;
+
+    cJSON *name =
+        cJSON_GetObjectItem(
+            arguments, "name");
+
+    if (cJSON_IsString(name)) {
+        snprintf(
+            device_array[index]
+                .endpoint[ep_index]
+                .dev_name,
+            sizeof(device_array[index]
+                .endpoint[ep_index]
+                .dev_name),
+            "%s",
+            name->valuestring);
+    }
+
+    return uart_save_device_to_nvs(index);
+}
+static cJSON *get_command_endpoint_json(cJSON *root)
+{
+    cJSON *ep = NULL;
+
+    /*
+     * 1. Root endpointId
+     */
+    ep = cJSON_GetObjectItem(
+        root,
+        "endpointId");
+
+    if (cJSON_IsNumber(ep))
+        return ep;
+
+    /*
+     * 2. Root endpointNumber
+     */
+    ep = cJSON_GetObjectItem(
+        root,
+        "endpointNumber");
+
+    if (cJSON_IsNumber(ep))
+        return ep;
+
+    /*
+     * 3. arguments.endpointId
+     */
+    cJSON *args =
+        cJSON_GetObjectItem(
+            root,
+            "arguments");
+
+    if (cJSON_IsObject(args))
+    {
+        ep = cJSON_GetObjectItem(
+            args,
+            "endpointId");
+
+        if (cJSON_IsNumber(ep))
+            return ep;
+
+        /*
+         * 4. arguments.endpointNumber
+         */
+        ep = cJSON_GetObjectItem(
+            args,
+            "endpointNumber");
+
+        if (cJSON_IsNumber(ep))
+            return ep;
+    }
+
+    return NULL;
+}
+
+/* App deletion deauthorizes the H2 session only. Zigbee network/device/scene
+ * state is intentionally preserved, just like Wi-Fi credentials on C3. */
+static void handle_gateway_deauthorize(uint16_t seq, const char *request_id)
+{
+    nuos_gateway_deauthorize_session();
+    send_ack(seq, request_id, "accepted");
+    send_response(seq, request_id, "deauthorized", NULL);
+}
+
+static void handle_gateway_authorize(uint16_t seq, const char *request_id)
+{
+    esp_err_t err = nuos_gateway_authorize_session();
+    if (err == ESP_ERR_INVALID_STATE) {
+        send_ack(seq, request_id, "accepted");
+        send_response(seq, request_id, "zigbee_not_ready", NULL);
+        return;
+    }
+    if (err != ESP_OK) {
+        send_error_response(seq, request_id, "GATEWAY_AUTHORIZE_FAILED", esp_err_to_name(err));
+        return;
+    }
+    send_ack(seq, request_id, "accepted");
+    send_response(seq, request_id, "authorized", NULL);
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Command processing                                                           */
+/* -------------------------------------------------------------------------- */
+
+static void process_command(void)
+{
+    rx_payload[rx_length] = '\0';
+
+    cJSON *root =
+        cJSON_Parse(
+            (char *)rx_payload);
+
+    if (root == NULL) {
+        send_error_response(
+            rx_seq,
+            NULL,
+            "INVALID_JSON",
+            "Invalid JSON payload");
+        return;
+    }
+
+    /*
+     * New protocol uses "command".
+     * "cmd" is accepted for backward compatibility with your
+     * current C3 firmware.
+     */
+    cJSON *command =
+        cJSON_GetObjectItem(
+            root, "command");
+
+    if (!cJSON_IsString(command))
+        command =
+            cJSON_GetObjectItem(
+                root, "cmd");
+
+    if (!cJSON_IsString(command)) {
+        cJSON_Delete(root);
+
+        send_error_response(
+            rx_seq,
+            NULL,
+            "INVALID_COMMAND",
+            "Missing command");
+        return;
+    }
+
+    /*
+     * requestId is the public correlation identifier. It is opaque and
+     * generated by the caller; nobody needs to memorize a command table.
+     * commandId remains accepted only for backward compatibility.
+     */
+    cJSON *request_id = cJSON_GetObjectItem(root, "requestId");
+    if (!cJSON_IsString(request_id))
+        request_id = cJSON_GetObjectItem(root, "commandId");
+
+    const char *request_id_str =
+        cJSON_IsString(request_id) ? request_id->valuestring : NULL;
+
+    /* Keep the local variable name used by the legacy handlers below. */
+    const char *command_id_str = request_id_str;
+
+    /* The H2 session starts unauthorized. Only gateway.authorize and
+     * gateway.deauthorize are accepted until C3 authorization completes. */
+    const char *incoming_cmd = command->valuestring;
+    if (!nuos_gateway_is_authorized() &&
+        strcmp(incoming_cmd, "gateway.authorize") != 0 &&
+        strcmp(incoming_cmd, "gateway.deauthorize") != 0) {
+        send_error_response(rx_seq, request_id_str, "GATEWAY_UNAUTHORIZED",
+                            "Gateway session is not authorized");
+        cJSON_Delete(root);
+        return;
+    }
+
+    /* --------------------------------------------------------- */
+    /* UART link heartbeat                                       */
+    /* --------------------------------------------------------- */
+    /*
+     * link.ping is a physical UART health-check command. It is
+     * intentionally handled before the normal application command
+     * table so that it never reaches UNKNOWN_COMMAND.
+     *
+     * H2 does not generate pings by itself; C3 sends them only when
+     * the UART has been idle. Reply immediately with status=pong.
+     */
+    if (strcmp(command->valuestring, "link.ping") == 0 ||
+        strcmp(command->valuestring, "ping") == 0) {
+
+        ESP_LOGI(TAG, "UART command: link.ping seq=%u -> sending pong",
+                 (unsigned)rx_seq);
+
+        send_response(
+            rx_seq,
+            request_id_str,
+            "pong",
+            NULL);
+
+        cJSON_Delete(root);
+        return;
+    }
+
+    const char *cmd =
+        command->valuestring;
+
+    cJSON *arguments =
+        cJSON_GetObjectItem(
+            root, "arguments");
+
+    /*
+     * For old commands, arguments can be the root itself.
+     */
+    if (arguments == NULL)
+        arguments = root;
+
+    ESP_LOGI(
+        TAG,
+        "UART command: %s seq=%u",
+        cmd,
+        rx_seq);
+
+    if (strcmp(cmd, "gateway.authorize") == 0) {
+        handle_gateway_authorize(rx_seq, command_id_str);
+        cJSON_Delete(root);
+        return;
+    }
+    if (strcmp(cmd, "gateway.deauthorize") == 0) {
+        handle_gateway_deauthorize(rx_seq, command_id_str);
+        cJSON_Delete(root);
+        return;
+    }
+
+    /* --------------------------------------------------------- */
+    /* status.led -- C3 -> H2 RGB status control                  */
+    /* --------------------------------------------------------- */
+    if (strcmp(cmd, "status.led") == 0 || strcmp(cmd, "led.status") == 0) {
+        cJSON *state_json = cJSON_GetObjectItem(arguments, "state");
+        cJSON *event_json = cJSON_GetObjectItem(arguments, "event");
+        bool ok = false;
+
+        if (cJSON_IsString(state_json)) {
+            ok = nuos_uart_led_status_from_string(state_json->valuestring);
+        }
+        if (cJSON_IsString(event_json)) {
+            nuos_uart_led_event(event_json->valuestring);
+            ok = true;
+        }
+
+        if (!ok) {
+            send_error_response(rx_seq, command_id_str, "INVALID_LED_STATUS",
+                                "Use arguments.state or arguments.event");
+        } else {
+            send_ack(rx_seq, command_id_str, "accepted");
+            send_response(rx_seq, command_id_str, "completed", NULL);
+        }
+        cJSON_Delete(root);
+        return;
+    }
+
+    /* --------------------------------------------------------- */
+    /* device.list                                                */
+    /* --------------------------------------------------------- */
+
+    if (strcmp(cmd, "device.list") == 0 ||
+        strcmp(cmd, "get_all_devices") == 0) {
+
+        send_ack(rx_seq, command_id_str, "accepted");
+        ESP_LOGI(TAG, "device.list: using heap-free serializer; devices_count=%u freeHeap=%u largestBlock=%u",
+                 (unsigned)devices_count,
+                 (unsigned)esp_get_free_heap_size(),
+                 (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
+        if (!send_device_list_static(rx_seq, command_id_str)) {
+            ESP_LOGE(TAG, "device.list: heap-free response transmission failed");
+        }
+        cJSON_Delete(root);
+        return;
+    }
+
+    /* --------------------------------------------------------- */
+    /* get_unconfigured_devices                                   */
+    /* --------------------------------------------------------- */
+
+    if (strcmp(cmd,
+               "get_unconfigured_devices") == 0) {
+
+        send_ack(
+            rx_seq,
+            command_id_str,
+            "accepted");
+
+        cJSON *data =
+            create_device_list_data(
+                true, false);
+
+        send_response(
+            rx_seq,
+            command_id_str,
+            data ? "completed" : "failed",
+            data);
+
+        cJSON_Delete(root);
+        return;
+    }
+
+    /* --------------------------------------------------------- */
+    /* device.status.list                                         */
+    /* --------------------------------------------------------- */
+
+    if (strcmp(cmd, "device.status.list") == 0 ||
+        strcmp(cmd, "get_all_devices_status") == 0) {
+
+        send_ack(
+            rx_seq,
+            command_id_str,
+            "accepted");
+
+        cJSON *data =
+            create_device_list_data(
+                false, true);
+
+        send_response(
+            rx_seq,
+            command_id_str,
+            data ? "completed" : "failed",
+            data);
+
+        cJSON_Delete(root);
+        return;
+    }
+
+    /* --------------------------------------------------------- */
+    /* Find device for single-device commands                     */
+    /* --------------------------------------------------------- */
+
+    cJSON *device_id =
+        cJSON_GetObjectItem(
+            root, "deviceId");
+
+    int device_index = -1;
+
+    if (cJSON_IsString(device_id))
+        device_index =
+            find_device_by_device_id(
+                device_id->valuestring);
+
+    /* --------------------------------------------------------- */
+    /* device.get                                                  */
+    /* --------------------------------------------------------- */
+
+    if (strcmp(cmd, "device.get") == 0) {
+
+        if (device_index < 0) {
+            send_error_response(
+                rx_seq,
+                command_id_str,
+                "DEVICE_NOT_FOUND",
+                "Device not found");
+
+            cJSON_Delete(root);
+            return;
+        }
+
+        send_ack(
+            rx_seq,
+            command_id_str,
+            "accepted");
+
+        cJSON *data =
+            create_device_info(
+                &device_array[device_index],
+                false);
+
+        send_response(
+            rx_seq,
+            command_id_str,
+            data ? "completed" : "failed",
+            data);
+
+        cJSON_Delete(root);
+        return;
+    }
+
+    /* --------------------------------------------------------- */
+    /* device.status.get                                           */
+    /* --------------------------------------------------------- */
+
+    if (strcmp(cmd, "device.status.get") == 0) {
+
+        if (device_index < 0) {
+            send_error_response(
+                rx_seq,
+                command_id_str,
+                "DEVICE_NOT_FOUND",
+                "Device not found");
+
+            cJSON_Delete(root);
+            return;
+        }
+
+        send_ack(
+            rx_seq,
+            command_id_str,
+            "accepted");
+
+        cJSON *data =
+            create_single_device_status(
+                &device_array[device_index]);
+
+        send_response(
+            rx_seq,
+            command_id_str,
+            data ? "completed" : "failed",
+            data);
+
+        cJSON_Delete(root);
+        return;
+    }
+
+    /* --------------------------------------------------------- */
+    /* device.configure                                           */
+    /* --------------------------------------------------------- */
+
+    if (strcmp(cmd, "device.configure") == 0) {
+
+        if (device_index < 0) {
+            send_error_response(
+                rx_seq,
+                command_id_str,
+                "DEVICE_NOT_FOUND",
+                "Device not found");
+
+            cJSON_Delete(root);
+            return;
+        }
+
+        send_ack(
+            rx_seq,
+            command_id_str,
+            "accepted");
+
+        esp_err_t err =
+            configure_device(
+                (uint16_t)device_index,
+                arguments);
+
+        if (err != ESP_OK) {
+            send_error_response(
+                rx_seq,
+                command_id_str,
+                "CONFIGURATION_FAILED",
+                esp_err_to_name(err));
+
+            cJSON_Delete(root);
+            return;
+        }
+
+        /*
+         * Tell C3 that configuration is now changed.
+         */
+        cJSON *event =
+            cJSON_CreateObject();
+
+        if (event != NULL) {
+            cJSON_AddStringToObject(
+                event, "type", "event");
+
+            cJSON_AddStringToObject(
+                event, "eventType",
+                "device.configuration_changed");
+
+            cJSON *d =
+                create_device_info(
+                    &device_array[device_index],
+                    false);
+
+            if (d != NULL)
+                cJSON_AddItemToObject(
+                    event, "device", d);
+
+            send_json_frame(
+                UART_TYPE_EVENT,
+                0,
+                event);
+        }
+
+        cJSON_Delete(root);
+        return;
+    }
+
+    /* --------------------------------------------------------- */
+    /* endpoint.configure                                         */
+    /* --------------------------------------------------------- */
+
+    if (strcmp(cmd, "endpoint.configure") == 0) {
+
+        if (device_index < 0) {
+            send_error_response(
+                rx_seq,
+                command_id_str,
+                "DEVICE_NOT_FOUND",
+                "Device not found");
+
+            cJSON_Delete(root);
+            return;
+        }
+
+        cJSON *ep_json =
+            cJSON_GetObjectItem(
+                root, "endpointId");
+
+        if (!cJSON_IsNumber(ep_json)) {
+            ep_json =
+                cJSON_GetObjectItem(
+                    root, "endpointNumber");
+        }
+
+        if (!cJSON_IsNumber(ep_json)) {
+            send_error_response(
+                rx_seq,
+                command_id_str,
+                "INVALID_ENDPOINT",
+                "Missing endpointId");
+
+            cJSON_Delete(root);
+            return;
+        }
+
+        uint8_t endpoint =
+            (uint8_t)ep_json->valueint;
+
+        send_ack(
+            rx_seq,
+            command_id_str,
+            "accepted");
+
+        esp_err_t err =
+            configure_endpoint(
+                (uint16_t)device_index,
+                endpoint,
+                arguments);
+
+        if (err != ESP_OK) {
+            send_error_response(
+                rx_seq,
+                command_id_str,
+                "ENDPOINT_CONFIGURATION_FAILED",
+                esp_err_to_name(err));
+        }
+
+        cJSON_Delete(root);
+        return;
+    }
+
+    /* --------------------------------------------------------- */
+    /* device.remove                                               */
+    /* --------------------------------------------------------- */
+
+    if (strcmp(cmd, "device.remove") == 0 ||
+        strcmp(cmd, "remove_device") == 0) {
+
+        if (device_index < 0) {
+            send_error_response(
+                rx_seq,
+                command_id_str,
+                "DEVICE_NOT_FOUND",
+                "Device not found");
+
+            cJSON_Delete(root);
+            return;
+        }
+
+        /*
+         * ACK means only that H2 accepted the request.
+         * Actual removal is confirmed asynchronously.
+         */
+        send_ack(
+            rx_seq,
+            command_id_str,
+            "accepted");
+
+        esp_err_t err =
+            nuos_uart_remove_zigbee_device(
+                (uint16_t)device_index);
+
+        if (err != ESP_OK) {
+            send_error_response(
+                rx_seq,
+                command_id_str,
+                "REMOVE_REQUEST_FAILED",
+                esp_err_to_name(err));
+        }
+
+        cJSON_Delete(root);
+        return;
+    }
+
+    /* --------------------------------------------------------- */
+    /* commissioning.start                                         */
+    /* --------------------------------------------------------- */
+
+    if (strcmp(cmd, "commissioning.start") == 0 ||
+        strcmp(cmd, "start_commissioning") == 0) {
+
+        uint16_t timeout = 180;
+
+        cJSON *timeout_json =
+            cJSON_GetObjectItem(
+                arguments, "duration");
+
+        if (!cJSON_IsNumber(timeout_json))
+            timeout_json =
+                cJSON_GetObjectItem(
+                    arguments, "timeout");
+
+        if (cJSON_IsNumber(timeout_json)) {
+            timeout =
+                (uint16_t)timeout_json->valueint;
+
+            if (timeout == 0)
+                timeout = 180;
+
+            if (timeout > 180)
+                timeout = 180;
+        }
+
+        send_ack(
+            rx_seq,
+            command_id_str,
+            "accepted");
+
+        nuos_start_commissioning(timeout);
+
+        cJSON_Delete(root);
+        return;
+    }
+
+    /* --------------------------------------------------------- */
+    /* commissioning.stop                                          */
+    /* --------------------------------------------------------- */
+
+    if (strcmp(cmd, "commissioning.stop") == 0 ||
+        strcmp(cmd, "stop_commissioning") == 0) {
+
+        send_ack(
+            rx_seq,
+            command_id_str,
+            "accepted");
+
+        nuos_stop_commissioning();
+
+        cJSON_Delete(root);
+        return;
+    }
+
+    /* --------------------------------------------------------- */
+    /* device.set -- NUOS Ecosystem API V2                      */
+    /* --------------------------------------------------------- */
+    /*
+     * Public command shape:
+     * {
+     *   "schema":"nuos.gateway.v2",
+     *   "type":"command",
+     *   "requestId":"opaque-id",
+     *   "deviceId":"...",
+     *   "endpoint":1,
+     *   "set":{"power":true,"brightness":75}
+     * }
+     *
+     * The H2 implementation deliberately keeps the Zigbee/ZCL mapping
+     * private. New cloud integrations use properties, not command names.
+     */
+    if (strcmp(cmd, "device.set") == 0) {
+        if (device_index < 0) {
+            send_error_response(rx_seq, command_id_str,
+                                "DEVICE_NOT_FOUND", "Device not found");
+            cJSON_Delete(root);
+            return;
+        }
+
+        cJSON *set_obj = cJSON_GetObjectItem(root, "set");
+        if (!cJSON_IsObject(set_obj))
+            set_obj = cJSON_GetObjectItem(arguments, "set");
+
+        if (!cJSON_IsObject(set_obj)) {
+            send_error_response(rx_seq, command_id_str,
+                                "INVALID_SET", "set must be an object");
+            cJSON_Delete(root);
+            return;
+        }
+
+        cJSON *ep_json = cJSON_GetObjectItem(root, "endpoint");
+        if (!cJSON_IsNumber(ep_json)) ep_json = cJSON_GetObjectItem(root, "endpointId");
+        if (!cJSON_IsNumber(ep_json)) ep_json = cJSON_GetObjectItem(arguments, "endpoint");
+        if (!cJSON_IsNumber(ep_json)) ep_json = cJSON_GetObjectItem(arguments, "endpointId");
+        if (!cJSON_IsNumber(ep_json) || ep_json->valueint < 1 || ep_json->valueint > 255) {
+            send_error_response(rx_seq, command_id_str,
+                                "INVALID_ENDPOINT", "Missing or invalid endpoint");
+            cJSON_Delete(root);
+            return;
+        }
+        uint8_t ep = (uint8_t)ep_json->valueint;
+        node_module_t *dev = &device_array[device_index];
+        endpoint_t *ep_ctx = NULL;
+        for (uint8_t i = 0; i < dev->ep_counts && i < MAX_DEVICES_IN_MODULE; i++) {
+            if (dev->endpoint[i].ep == ep) { ep_ctx = &dev->endpoint[i]; break; }
+        }
+        if (!ep_ctx) {
+            send_error_response(rx_seq, command_id_str,
+                                "ENDPOINT_NOT_FOUND", "Endpoint not found");
+            cJSON_Delete(root);
+            return;
+        }
+
+        bool any = false;
+        cJSON *power = cJSON_GetObjectItem(set_obj, "power");
+        if (!cJSON_IsBool(power)) power = cJSON_GetObjectItem(set_obj, "on");
+        cJSON *brightness = cJSON_GetObjectItem(set_obj, "brightness");
+
+        /* Reject unknown public properties instead of silently falling back
+         * to raw Zigbee/ZCL behavior. New capabilities are added explicitly. */
+        for (cJSON *item = set_obj->child; item != NULL; item = item->next) {
+            bool known = !strcmp(item->string, "power") ||
+                         !strcmp(item->string, "on") ||
+                         !strcmp(item->string, "brightness");
+            if (!known) {
+                send_error_response(rx_seq, command_id_str,
+                                    "UNSUPPORTED_PROPERTY", item->string ? item->string : "unknown");
+                cJSON_Delete(root);
+                return;
+            }
+        }
+
+        if (cJSON_IsBool(power)) any = true;
+        if (cJSON_IsNumber(brightness)) any = true;
+        if (!any) {
+            send_error_response(rx_seq, command_id_str,
+                                "INVALID_VALUE", "No valid writable property was supplied");
+            cJSON_Delete(root);
+            return;
+        }
+        if (cJSON_IsNumber(brightness) &&
+            (brightness->valuedouble < 0 || brightness->valuedouble > 100)) {
+            send_error_response(rx_seq, command_id_str,
+                                "INVALID_VALUE", "brightness must be 0..100");
+            cJSON_Delete(root);
+            return;
+        }
+
+        send_ack(rx_seq, command_id_str, "accepted");
+        nuos_uart_led_event("zigbee_control_tx");
+        esp_err_t err = ESP_OK;
+        cJSON *args_set = cJSON_CreateObject();
+        if (!args_set) {
+            send_error_response(rx_seq, command_id_str, "OUT_OF_MEMORY", "Cannot allocate set arguments");
+            cJSON_Delete(root);
+            return;
+        }
+        if (cJSON_IsBool(power)) cJSON_AddBoolToObject(args_set, "on", cJSON_IsTrue(power));
+        if (cJSON_IsNumber(brightness)) cJSON_AddNumberToObject(args_set, "brightness", brightness->valuedouble);
+
+        if (cJSON_IsBool(power)) {
+            err = nuos_uart_control_device((uint16_t)device_index, ep, "power", "set", args_set);
+        }
+        if (err == ESP_OK && cJSON_IsNumber(brightness)) {
+            err = nuos_uart_control_device((uint16_t)device_index, ep, "brightness", "set", args_set);
+        }
+        cJSON_Delete(args_set);
+        if (err != ESP_OK) {
+            send_error_response(rx_seq, command_id_str, "SET_FAILED", esp_err_to_name(err));
+            cJSON_Delete(root);
+            return;
+        }
+
+        cJSON *data = cJSON_CreateObject();
+        if (data) {
+            char applied_device_id[40];
+            make_device_id(device_array[device_index].ieee_addr, applied_device_id, sizeof(applied_device_id));
+            cJSON_AddStringToObject(data, "deviceId", applied_device_id);
+            cJSON_AddNumberToObject(data, "endpoint", ep);
+            cJSON *applied = cJSON_Duplicate(set_obj, true);
+            if (applied) cJSON_AddItemToObject(data, "applied", applied);
+        }
+        send_response(rx_seq, command_id_str, "completed", data);
+        cJSON_Delete(root);
+        return;
+    }
+
+    /* --------------------------------------------------------- */
+    /* device.get_state -- NUOS Ecosystem API V2                 */
+    /* --------------------------------------------------------- */
+    if (strcmp(cmd, "device.get_state") == 0) {
+        if (device_index < 0) {
+            send_error_response(rx_seq, command_id_str, "DEVICE_NOT_FOUND", "Device not found");
+            cJSON_Delete(root);
+            return;
+        }
+        send_ack(rx_seq, command_id_str, "accepted");
+        cJSON *data = create_single_device_status(&device_array[device_index]);
+        nuos_uart_led_event("zigbee_control_ok");
+        send_response(rx_seq, command_id_str, "completed", data);
+        cJSON_Delete(root);
+        return;
+    }
+
+    /* --------------------------------------------------------- */
+    /* --------------------------------------------------------- */
+    /* status.set                                                */
+    /* --------------------------------------------------------- */
+    /*
+     * Gateway/C3 -> H2:
+     *
+     * {
+     *   "type":"command",
+     *   "commandId":"cmd_20",
+     *   "command":"status.set",
+     *   "deviceId":"NUOS_916668FEFFBD4D74",
+     *   "endpointId":1,
+     *   "arguments":{
+     *      "on":true,
+     *      "brightness":75
+     *   }
+     * }
+     *
+     * Only supplied properties are changed.
+     * The actual Zigbee ZCL operation is performed by the existing
+     * nuos_uart_control_device() application hook.
+     */
+
+    if (strcmp(cmd, "status.set") == 0 ||
+        strcmp(cmd, "set") == 0) {
+
+        if (device_index < 0) {
+            send_error_response(
+                rx_seq,
+                command_id_str,
+                "DEVICE_NOT_FOUND",
+                "Device not found");
+            cJSON_Delete(root);
+            return;
+        }
+
+
+cJSON *ep_json =
+    get_command_endpoint_json(root);
+
+if (!cJSON_IsNumber(ep_json) ||
+    ep_json->valueint < 1 ||
+    ep_json->valueint > 240)
+{
+    send_error_response(
+        rx_seq,
+        command_id_str,
+        "INVALID_ENDPOINT",
+        "Missing or invalid endpointId");
+
+    cJSON_Delete(root);
+    return;
+}
+
+
+        if (!cJSON_IsNumber(ep_json))
+            ep_json =
+                cJSON_GetObjectItem(root, "endpointNumber");
+
+        /*
+         * Also accept:
+         *
+         * "arguments":{
+         *     "endpointId":1,
+         *     "on":true
+         * }
+         */
+        if (!cJSON_IsNumber(ep_json)) {
+
+            cJSON *ep_args =
+                cJSON_GetObjectItem(root, "arguments");
+
+            if (cJSON_IsObject(ep_args)) {
+
+                ep_json =
+                    cJSON_GetObjectItem(
+                        ep_args, "endpointId");
+
+                if (!cJSON_IsNumber(ep_json))
+                    ep_json =
+                        cJSON_GetObjectItem(
+                            ep_args, "endpointNumber");
+            }
+        }
+
+        if (!cJSON_IsNumber(ep_json) ||
+            ep_json->valueint <= 0 ||
+            ep_json->valueint > 255) {
+
+            send_error_response(
+                rx_seq,
+                command_id_str,
+                "INVALID_ENDPOINT",
+                "Missing or invalid endpointId");
+            cJSON_Delete(root);
+            return;
+        }
+
+        uint8_t ep =
+            (uint8_t)ep_json->valueint;
+
+        cJSON *status_args =
+            cJSON_GetObjectItem(root, "arguments");
+
+        if (!cJSON_IsObject(status_args))
+            status_args = root;
+
+        /* Accept both public property names used by C3/cloud:
+         *   "power": true/false
+         * and the legacy/internal alias:
+         *   "on": true/false
+         */
+        cJSON *on_json =
+            cJSON_GetObjectItem(status_args, "on");
+        if (!cJSON_IsBool(on_json))
+            on_json = cJSON_GetObjectItem(status_args, "power");
+
+        cJSON *brightness_json =
+            cJSON_GetObjectItem(status_args, "brightness");
+
+        bool has_on =
+            cJSON_IsBool(on_json);
+
+        bool has_brightness =
+            cJSON_IsNumber(brightness_json);
+
+        if (!has_on && !has_brightness) {
+
+            send_error_response(
+                rx_seq,
+                command_id_str,
+                "NO_STATUS",
+                "status.set requires on and/or brightness");
+            cJSON_Delete(root);
+            return;
+        }
+
+        if (has_brightness &&
+            (brightness_json->valueint < 0 ||
+             brightness_json->valueint > 100)) {
+
+            send_error_response(
+                rx_seq,
+                command_id_str,
+                "INVALID_BRIGHTNESS",
+                "brightness must be 0..100");
+            cJSON_Delete(root);
+            return;
+        }
+
+        /*
+         * Validate endpoint before sending ACK.
+         */
+        node_module_t *dev =
+            &device_array[device_index];
+
+        endpoint_t *ep_ctx = NULL;
+
+        for (uint8_t i = 0;
+             i < dev->ep_counts &&
+             i < MAX_DEVICES_IN_MODULE;
+             i++) {
+
+            if (dev->endpoint[i].ep == ep) {
+                ep_ctx = &dev->endpoint[i];
+                break;
+            }
+        }
+
+        if (ep_ctx == NULL) {
+
+            send_error_response(
+                rx_seq,
+                command_id_str,
+                "ENDPOINT_NOT_FOUND",
+                "Endpoint not found");
+            cJSON_Delete(root);
+            return;
+        }
+
+        send_ack(
+            rx_seq,
+            command_id_str,
+            "accepted");
+
+        esp_err_t err = ESP_OK;
+
+        /*
+         * ON/OFF.
+         *
+         * Existing application hook receives the same arguments object,
+         * containing "on".
+         */
+        if (has_on) {
+
+            err =
+                nuos_uart_control_device(
+                    (uint16_t)device_index,
+                    ep,
+                    "power",
+                    "set",
+                    status_args);
+
+            if (err != ESP_OK) {
+
+                send_error_response(
+                    rx_seq,
+                    command_id_str,
+                    "POWER_SET_FAILED",
+                    esp_err_to_name(err));
+
+                cJSON_Delete(root);
+                return;
+            }
+        }
+
+        /*
+         * Brightness.
+         */
+        if (has_brightness) {
+
+            err =
+                nuos_uart_control_device(
+                    (uint16_t)device_index,
+                    ep,
+                    "brightness",
+                    "set",
+                    status_args);
+
+            if (err != ESP_OK) {
+
+                send_error_response(
+                    rx_seq,
+                    command_id_str,
+                    "BRIGHTNESS_SET_FAILED",
+                    esp_err_to_name(err));
+
+                cJSON_Delete(root);
+                return;
+            }
+        }
+
+        /*
+         * Update local cache after the application hook accepts the
+         * operation. The subsequent Zigbee report/event remains the
+         * authoritative device state.
+         */
+        cJSON *data =
+            cJSON_CreateObject();
+
+        if (data == NULL) {
+            cJSON_Delete(root);
+            return;
+        }
+
+        char id[40];
+
+        make_device_id(
+            dev->ieee_addr,
+            id,
+            sizeof(id));
+
+        cJSON_AddStringToObject(
+            data,
+            "deviceId",
+            id);
+
+        cJSON_AddNumberToObject(
+            data,
+            "endpointId",
+            ep);
+
+        cJSON *applied =
+            cJSON_CreateObject();
+
+        if (applied == NULL) {
+            cJSON_Delete(data);
+            cJSON_Delete(root);
+            return;
+        }
+
+        if (has_on) {
+
+            bool on =
+                cJSON_IsTrue(on_json);
+
+            ep_ctx->device_t.state = on;
+
+            cJSON_AddBoolToObject(
+                applied,
+                "on",
+                on);
+        }
+
+        if (has_brightness) {
+
+            uint8_t brightness =
+                (uint8_t)brightness_json->valueint;
+
+            ep_ctx->device_t.level =
+                brightness;
+
+            cJSON_AddNumberToObject(
+                applied,
+                "brightness",
+                brightness);
+        }
+
+        cJSON_AddItemToObject(
+            data,
+            "applied",
+            applied);
+
+        send_response(
+            rx_seq,
+            command_id_str,
+            "completed",
+            data);
+
+        cJSON_Delete(root);
+        return;
+    }
+
+    /* Generic endpoint control                                   */
+    /* --------------------------------------------------------- */
+
+    if (cJSON_IsString(device_id)) {
+
+        cJSON *ep_json =
+            cJSON_GetObjectItem(
+                root, "endpointId");
+
+        if (!cJSON_IsNumber(ep_json))
+            ep_json =
+                cJSON_GetObjectItem(
+                    root, "endpointNumber");
+
+        cJSON *capability =
+            cJSON_GetObjectItem(
+                root, "capability");
+
+        cJSON *command_name = NULL;
+
+        /*
+         * Supported forms:
+         *
+         * 1) "command":"set"
+         * 2) "command":"device.control",
+         *    "operation":"set"
+         */
+        if (strcmp(cmd, "device.control") == 0 ||
+            strcmp(cmd, "control") == 0) {
+            command_name =
+                cJSON_GetObjectItem(
+                    root, "operation");
+        } else {
+            command_name = command;
+        }
+
+        if (device_index >= 0 &&
+            cJSON_IsNumber(ep_json) &&
+            cJSON_IsString(capability) &&
+            cJSON_IsString(command_name)) {
+
+            uint8_t ep =
+                (uint8_t)ep_json->valueint;
+
+            send_ack(
+                rx_seq,
+                command_id_str,
+                "accepted");
+
+            esp_err_t err =
+                nuos_uart_control_device(
+                    (uint16_t)device_index,
+                    ep,
+                    capability->valuestring,
+                    command_name->valuestring,
+                    arguments);
+
+            if (err != ESP_OK) {
+                send_error_response(
+                    rx_seq,
+                    command_id_str,
+                    "CONTROL_FAILED",
+                    esp_err_to_name(err));
+            }
+
+            cJSON_Delete(root);
+            return;
+        }
+    }
+
+    /* --------------------------------------------------------- */
+    /* Unknown command                                            */
+    /* --------------------------------------------------------- */
+
+    send_error_response(
+        rx_seq,
+        command_id_str,
+        "UNKNOWN_COMMAND",
+        cmd);
+
+    cJSON_Delete(root);
+}
+
+/* -------------------------------------------------------------------------- */
+/* RX                                                                          */
+/* -------------------------------------------------------------------------- */
+
+static void reset_rx_fragment(void)
+{
+    if (rx_frag_buffer) free(rx_frag_buffer);
+    rx_frag_buffer = NULL;
+    rx_frag_total = 0;
+    rx_frag_message_id = 0;
+    rx_frag_count = 0;
+    rx_frag_next = 0;
+    rx_frag_seq = 0;
+    rx_frag_original_type = 0;
+}
+
+static void process_c3_complete_message(uint8_t type, uint8_t seq,
+                                        const uint8_t *data, size_t length)
+{
+    if (!data || length == 0 || length > UART_C3_MAX_MESSAGE) return;
+    if (type != UART_TYPE_COMMAND) {
+        ESP_LOGW(TAG, "UART RX non-command type=%u seq=%u len=%u", type, seq, (unsigned)length);
+        return;
+    }
+    if (length > UART_PROTO_MAX_PAYLOAD) {
+        ESP_LOGE(TAG, "UART command too large for H2 parser: %u", (unsigned)length);
+        return;
+    }
+
+    memcpy(rx_payload, data, length);
+    rx_length = (uint16_t)length;
+    rx_seq = seq;
+    ESP_LOGI(TAG, "UART RX COMMAND seq=%u len=%u", seq, (unsigned)length);
+    ESP_LOGI(TAG, "UART RX DATA: %.*s", (int)length, (const char *)data);
+    process_command();
+}
+
+static void process_c3_fragment(uint8_t frame_type, uint8_t seq,
+                                const uint8_t *data, uint16_t length)
+{
+    if (!data || length < UART_C3_FRAGMENT_HEADER) {
+        ESP_LOGE(TAG, "UART RX fragment too short: %u", length);
+        reset_rx_fragment();
+        return;
+    }
+
+    uint8_t original_type = data[0];
+    uint8_t flags = data[1];
+    uint16_t message_id = ((uint16_t)data[2] << 8) | data[3];
+    uint16_t index = ((uint16_t)data[4] << 8) | data[5];
+    uint16_t count = ((uint16_t)data[6] << 8) | data[7];
+    uint8_t version = data[8];
+
+    if (version != 0x01 || count == 0 || index >= count ||
+        original_type == TYPE_DATA_START || original_type == TYPE_DATA_CHUNK || original_type == TYPE_DATA_END) {
+        ESP_LOGE(TAG, "UART RX invalid fragment header id=%u index=%u/%u", message_id, index, count);
+        reset_rx_fragment();
+        return;
+    }
+
+    if (frame_type == TYPE_DATA_START || (flags & 0x01)) {
+        reset_rx_fragment();
+        rx_frag_buffer = (uint8_t *)malloc(UART_C3_MAX_MESSAGE + 1U);
+        if (!rx_frag_buffer) {
+            ESP_LOGE(TAG, "UART RX fragment allocation failed");
+            return;
+        }
+        rx_frag_message_id = message_id;
+        rx_frag_count = count;
+        rx_frag_next = 0;
+        rx_frag_seq = seq;
+        rx_frag_original_type = original_type;
+    }
+
+    if (!rx_frag_buffer || rx_frag_message_id != message_id ||
+        rx_frag_count != count || rx_frag_next != index ||
+        rx_frag_seq != seq || rx_frag_original_type != original_type) {
+        ESP_LOGE(TAG, "UART RX fragment sequence mismatch id=%u index=%u", message_id, index);
+        reset_rx_fragment();
+        return;
+    }
+
+    size_t chunk = length - UART_C3_FRAGMENT_HEADER;
+    if (rx_frag_total + chunk > UART_C3_MAX_MESSAGE) {
+        ESP_LOGE(TAG, "UART RX fragmented message too large");
+        reset_rx_fragment();
+        return;
+    }
+
+    memcpy(rx_frag_buffer + rx_frag_total, data + UART_C3_FRAGMENT_HEADER, chunk);
+    rx_frag_total += chunk;
+    rx_frag_next++;
+    ESP_LOGI(TAG, "UART RX fragment %u/%u: %u bytes", index + 1U, count, (unsigned)chunk);
+
+    if (frame_type == TYPE_DATA_END || (flags & 0x02)) {
+        if (index != count - 1U || rx_frag_next != count) {
+            ESP_LOGE(TAG, "UART RX incomplete fragmented message");
+            reset_rx_fragment();
+            return;
+        }
+        process_c3_complete_message(rx_frag_original_type, rx_frag_seq,
+                                    rx_frag_buffer, rx_frag_total);
+        reset_rx_fragment();
+    }
+}
+
+static void process_c3_frame(uint8_t type, uint8_t seq,
+                             const uint8_t *payload, uint16_t length)
+{
+    if (type == TYPE_DATA_START || type == TYPE_DATA_CHUNK || type == TYPE_DATA_END)
+        process_c3_fragment(type, seq, payload, length);
+    else
+        process_c3_complete_message(type, seq, payload, length);
+}
+
+static void reset_c3_rx_parser(void)
+{
+    rx_frame_state = 0;
+    rx_frame_length = 0;
+    rx_frame_index = 0;
+    rx_frame_sum = 0;
+    rx_frame_escaped = false;
+}
+
+static void process_c3_rx_byte(uint8_t raw)
+{
+    /*
+     * Detect SOF while it is still a raw on-wire byte, before de-escaping.
+     * UART_C3_SOF (0x7E) inside a payload is encoded as ESCAPE + 0x5E.
+     * If we unescape first, a decoded 0x7E is incorrectly treated as a new
+     * frame and the next two payload bytes become a bogus LEN (e.g. 18720).
+     * A literal 0x7E on the wire always resynchronizes the parser.
+     */
+    if (rx_frame_state != 0) {
+        if (raw == UART_C3_SOF) {
+            reset_c3_rx_parser();
+            rx_frame_state = 1; /* this raw byte is the new frame's SOF */
+            return;
+        }
+
+        if (rx_frame_escaped) {
+            raw ^= 0x20U;
+            rx_frame_escaped = false;
+        } else if (raw == UART_C3_ESCAPE) {
+            rx_frame_escaped = true;
+            return;
+        }
+    }
+
+    switch (rx_frame_state) {
+    case 0:
+        if (raw == UART_C3_SOF) rx_frame_state = 1;
+        break;
+    case 1:
+        rx_frame_length = (uint16_t)raw << 8;
+        rx_frame_state = 2;
+        break;
+    case 2:
+        rx_frame_length |= raw;
+        if (rx_frame_length < 2 || rx_frame_length > UART_C3_MAX_PAYLOAD + 2U) {
+            ESP_LOGE(TAG, "UART RX invalid frame length=%u", rx_frame_length);
+            reset_c3_rx_parser();
+        } else {
+            rx_frame_index = 0;
+            rx_frame_state = 3;
+        }
+        break;
+    case 3:
+        rx_frame_type = raw;
+        rx_frame_sum = raw;
+        rx_frame_state = 4;
+        break;
+    case 4:
+        rx_frame_seq = raw;
+        rx_frame_sum = (uint8_t)(rx_frame_sum + raw);
+        rx_frame_state = (rx_frame_length == 2) ? 6 : 5;
+        break;
+    case 5:
+        if (rx_frame_index >= UART_C3_MAX_PAYLOAD) {
+            reset_c3_rx_parser();
+            break;
+        }
+        rx_frame_payload[rx_frame_index++] = raw;
+        rx_frame_sum = (uint8_t)(rx_frame_sum + raw);
+        if (rx_frame_index >= rx_frame_length - 2U) rx_frame_state = 6;
+        break;
+    case 6: {
+        uint8_t expected = (uint8_t)(0xFFU - rx_frame_sum);
+        if (raw != expected) {
+            ESP_LOGE(TAG, "UART RX checksum error type=%u seq=%u rx=0x%02X calc=0x%02X",
+                     rx_frame_type, rx_frame_seq, raw, expected);
+            reset_c3_rx_parser();
+            break;
+        }
+        /* A complete frame with a valid checksum proves that bytes from the
+         * C3 reached the H2 UART RX pin and were decoded successfully. */
+        c3_uart_last_rx_tick = xTaskGetTickCount();
+        if (!c3_uart_link_connected) {
+            c3_uart_link_connected = true;
+            c3_uart_link_reported = true;
+            nuos_uart_led_set(0, 100, 0); // green = valid C3 frame/link
+
+            ESP_LOGI(TAG, "================================================");
+            ESP_LOGI(TAG, "C3 UART LINK: CONNECTED / VALID DATA RECEIVED");
+            ESP_LOGI(TAG, "C3 -> H2 UART RX path is OK");
+            ESP_LOGI(TAG, "================================================");
+        }
+        nuos_uart_led_set(0, 100, 0); // green = valid frame received
+
+        ESP_LOGI(TAG, "UART RX FRAME type=%u seq=%u len=%u",
+                 rx_frame_type, rx_frame_seq, (unsigned)(rx_frame_length - 2U));
+        process_c3_frame(rx_frame_type, rx_frame_seq,
+                         rx_frame_payload, (uint16_t)(rx_frame_length - 2U));
+        reset_c3_rx_parser();
+        break;
+    }
+    default:
+        reset_c3_rx_parser();
+        break;
+    }
+}
+
+static void uart_link_monitor_task(void *arg)
+{
+    (void)arg;
+    const TickType_t check_period = pdMS_TO_TICKS(5000);
+    const TickType_t timeout = pdMS_TO_TICKS(15000);
+
+    while (1) {
+        vTaskDelay(check_period);
+
+        TickType_t last = c3_uart_last_rx_tick;
+        if (last != 0 && (xTaskGetTickCount() - last) <= timeout) {
+            if (c3_uart_link_reported) {
+                ESP_LOGI(TAG, "C3 UART LINK: CONNECTED (last valid RX %u ms ago)",
+                         (unsigned)((xTaskGetTickCount() - last) * portTICK_PERIOD_MS));
+            }
+        } else if (c3_uart_link_connected) {
+            c3_uart_link_connected = false;
+            nuos_uart_led_set(120, 0, 0); // red = link lost
+            ESP_LOGW(TAG, "C3 UART LINK: NO VALID DATA for 15 seconds - check C3/wiring");
+        } else {
+            nuos_uart_led_set(120, 60, 0); // amber = waiting
+            ESP_LOGW(TAG, "C3 UART LINK: WAITING FOR VALID DATA FROM C3...");
+        }
+    }
+}
+
+static void uart_rx_task(void *arg)
+{
+    (void)arg;
+    uint8_t buffer[128];
+    ESP_LOGI(TAG, "C3 UART LINK CHECK: H2 UART RX task started; waiting for C3...");
+
+    while (1) {
+        nuos_uart_led_restore();
+        int len = uart_read_bytes(UART_PORT_NUM, buffer, sizeof(buffer), pdMS_TO_TICKS(100));
+        if (len > 0) {
+            nuos_uart_led_activity(120, 120, 120, 45); // white = H2 RX
+            for (int i = 0; i < len; i++) process_c3_rx_byte(buffer[i]);
+        }
+    }
+}
+
+/* -------------------------------------------------------------------------- */
+/* UART init                                                                    */
+/* -------------------------------------------------------------------------- */
+
+void uart_init(void)
+{
+    nuos_uart_led_init();
+
+    const uart_config_t config = {
+        .baud_rate = UART_BAUD_RATE,
+        .data_bits = UART_DATA_8_BITS,
+        .parity = UART_PARITY_DISABLE,
+        .stop_bits = UART_STOP_BITS_1,
+        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+        .source_clk = UART_SCLK_DEFAULT,
+    };
+
+    /* Keep the existing physical UART0 connection to the C3.
+     * Console routing is a build-time setting: CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y.
+     * Do NOT route ESP-IDF console output to UART0, and do NOT call uart_set_pin()
+     * here because the installed board wiring already uses the UART0 default pins.
+     */
+    ESP_ERROR_CHECK(
+        uart_param_config(
+            UART_PORT_NUM,
+            &config));
+
+    ESP_ERROR_CHECK(
+        uart_driver_install(
+            UART_PORT_NUM,
+            UART_RX_BUFFER_SIZE,
+            UART_TX_BUFFER_SIZE,
+            0,
+            NULL,
+            0));
+
+    uart_tx_mutex =
+        xSemaphoreCreateMutex();
+
+    if (uart_tx_mutex == NULL)
+        ESP_LOGE(TAG,
+                 "Failed to create UART TX mutex");
+
+    uart_json_mutex = xSemaphoreCreateMutex();
+    if (uart_json_mutex == NULL)
+        ESP_LOGE(TAG, "Failed to create UART JSON mutex; serialization buffer will be unprotected");
+
+    BaseType_t rx_ok = xTaskCreate(
+        uart_rx_task,
+        "nuos_uart_rx",
+        8192,
+        NULL,
+        TASK_PRIORITY_UART_RXD,
+        NULL);
+    if (rx_ok != pdPASS) {
+        ESP_LOGE(TAG, "Failed to create UART RX task");
+        return;
+    }
+
+    BaseType_t monitor_ok = xTaskCreate(
+        uart_link_monitor_task,
+        "nuos_uart_link",
+        3072,
+        NULL,
+        TASK_PRIORITY_UART_RXD,
+        NULL);
+    if (monitor_ok != pdPASS) {
+        ESP_LOGE(TAG, "Failed to create UART link monitor task");
+    }
+
+    ESP_LOGI(TAG, "NUOS UART protocol started on UART0 (existing GPIO24 TX / GPIO23 RX)");
+    ESP_LOGI(TAG, "C3 UART: existing UART0 wiring retained; console must use USB Serial/JTAG");
+    ESP_LOGI(TAG, "C3 UART LINK CHECK ENABLED: valid C3 frame = CONNECTED");
+}
+
+/* -------------------------------------------------------------------------- */
+/* Zigbee control implementation                                               */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * IMPORTANT:
+ *
+ * These functions use the legacy ESP-Zigbee API names already present in
+ * your existing esp_zigbee_gateway.c:
+ *
+ *   esp_zb_zcl_on_off_cmd_req()
+ *   esp_zb_zcl_level_move_to_level_with_onoff_cmd_req()
+ *   esp_zb_zdo_device_leave_req()
+ *
+ * Your existing gateway source uses exactly these APIs, so this implementation
+ * matches the SDK/API generation of the project instead of the newer ezb_ API.
+ */
+
+/* -------------------------------------------------------------------------- */
+/* Pending remove context                                                      */
+/* -------------------------------------------------------------------------- */
+
+typedef struct {
+    bool active;
+    uint16_t index;
+    node_module_t device;
+} uart_pending_remove_t;
+
+static uart_pending_remove_t g_pending_remove = {
+    .active = false,
+};
+
+/* -------------------------------------------------------------------------- */
+/* Remove database record after Zigbee leave succeeds                          */
+/* -------------------------------------------------------------------------- */
+
+static esp_err_t uart_delete_device_from_nvs_and_array(
+    uint16_t device_index)
+{
+    if (device_index >= devices_count)
+        return ESP_ERR_INVALID_ARG;
+
+    nvs_handle_t handle;
+    esp_err_t err =
+        nvs_open(
+            NVS_NAMESPACE,
+            NVS_READWRITE,
+            &handle);
+
+    if (err != ESP_OK)
+        return err;
+
+    uint16_t old_count = devices_count;
+
+    /*
+     * Shift all records down.
+     *
+     * device_0
+     * device_1
+     * device_2  <-- remove
+     * device_3
+     *
+     * becomes:
+     *
+     * device_0
+     * device_1
+     * device_2 <- old device_3
+     */
+    for (uint16_t i = device_index;
+         i + 1 < old_count;
+         i++) {
+
+        memcpy(
+            &device_array[i],
+            &device_array[i + 1],
+            sizeof(node_module_t));
+    }
+
+    devices_count--;
+
+    memset(
+        &device_array[devices_count],
+        0,
+        sizeof(node_module_t));
+
+    /*
+     * Rewrite only affected records.
+     */
+    for (uint16_t i = device_index;
+         i < devices_count;
+         i++) {
+
+        char key[16];
+
+        snprintf(
+            key,
+            sizeof(key),
+            "device_%u",
+            i);
+
+        err =
+            nvs_set_blob(
+                handle,
+                key,
+                &device_array[i],
+                sizeof(node_module_t));
+
+        if (err != ESP_OK)
+            break;
+    }
+
+    /*
+     * Erase the old final record.
+     */
+    if (err == ESP_OK) {
+
+        char last_key[16];
+
+        snprintf(
+            last_key,
+            sizeof(last_key),
+            "device_%u",
+            devices_count);
+
+        err =
+            nvs_erase_key(
+                handle,
+                last_key);
+
+        if (err == ESP_ERR_NVS_NOT_FOUND)
+            err = ESP_OK;
+    }
+
+    if (err == ESP_OK)
+        err = nvs_commit(handle);
+
+    nvs_close(handle);
+
+    return err;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Zigbee leave callback                                                       */
+/* -------------------------------------------------------------------------- */
+
+static void uart_device_leave_callback(
+    esp_zb_zdp_status_t zdo_status,
+    void *user_ctx)
+{
+    uint16_t index =
+        (uint16_t)(uintptr_t)user_ctx;
+
+    ESP_LOGI(
+        TAG,
+        "Zigbee leave response: status=%d index=%u",
+        zdo_status,
+        index);
+
+    if (!g_pending_remove.active)
+        return;
+
+    /*
+     * Device was NOT successfully removed.
+     *
+     * Keep the device in NVS/device_array.
+     */
+    if (zdo_status != ESP_ZB_ZDP_STATUS_SUCCESS)
+    {
+        ESP_LOGE(
+            TAG,
+            "Zigbee device removal failed, "
+            "status=%d. Device kept in database.",
+            zdo_status);
+
+        g_pending_remove.active = false;
+        return;
+    }
+
+    /*
+     * Copy device information before modifying device_array.
+     */
+    node_module_t removed_device;
+
+    memcpy(
+        &removed_device,
+        &g_pending_remove.device,
+        sizeof(node_module_t));
+
+    ESP_LOGI(
+        TAG,
+        "Zigbee device 0x%04X removed successfully",
+        removed_device.short_addr);
+
+    /*
+     * Notify UART/C3 first.
+     */
+    uart_send_device_removed_event(
+        &removed_device);
+
+    /*
+     * Now remove the device from NVS/device_array.
+     */
+    esp_err_t err =
+        uart_delete_device_from_nvs_and_array(
+            index);
+
+    if (err != ESP_OK)
+    {
+        ESP_LOGE(
+            TAG,
+            "Zigbee removal succeeded but "
+            "NVS deletion failed: %s",
+            esp_err_to_name(err));
+    }
+    else
+    {
+        ESP_LOGI(
+            TAG,
+            "Device successfully removed "
+            "from Zigbee + NVS");
+    }
+
+    g_pending_remove.active = false;
+}
+
+
+
+
+/* -------------------------------------------------------------------------- */
+/* Control device                                                              */
+/* -------------------------------------------------------------------------- */
+
+esp_err_t nuos_uart_control_device(
+    uint16_t device_index,
+    uint8_t endpoint,
+    const char *capability,
+    const char *command,
+    cJSON *arguments)
+{
+    if (device_index >= devices_count)
+        return ESP_ERR_INVALID_ARG;
+
+    if (capability == NULL ||
+        command == NULL ||
+        arguments == NULL)
+        return ESP_ERR_INVALID_ARG;
+
+    node_module_t *device =
+        &device_array[device_index];
+
+    endpoint_t *ep_ctx = NULL;
+
+    for (uint8_t i = 0;
+         i < device->ep_counts &&
+         i < MAX_DEVICES_IN_MODULE;
+         i++) {
+
+        if (device->endpoint[i].ep == endpoint) {
+
+            ep_ctx =
+                &device->endpoint[i];
+
+            break;
+        }
+    }
+
+    if (ep_ctx == NULL)
+        return ESP_ERR_NOT_FOUND;
+
+    /*
+     * Only "set" is currently accepted here.
+     */
+    if (strcmp(command, "set") != 0)
+        return ESP_ERR_NOT_SUPPORTED;
+
+    /* ====================================================================== */
+    /* ON/OFF                                                                  */
+    /* ====================================================================== */
+
+    if (strcmp(capability, "power") == 0 ||
+        strcmp(capability, "on_off") == 0 ||
+        strcmp(capability, "switch") == 0) {
+
+        cJSON *on =
+            cJSON_GetObjectItem(
+                arguments,
+                "on");
+
+        /* Public API uses "power"; "on" remains a supported alias. */
+        if (!cJSON_IsBool(on))
+            on = cJSON_GetObjectItem(arguments, "power");
+
+        if (!cJSON_IsBool(on))
+            return ESP_ERR_INVALID_ARG;
+
+        bool state =
+            cJSON_IsTrue(on);
+
+        esp_zb_zcl_on_off_cmd_t cmd_req = {0};
+
+        cmd_req.zcl_basic_cmd.dst_addr_u.addr_short =
+            device->short_addr;
+
+        cmd_req.zcl_basic_cmd.dst_endpoint =
+            endpoint;
+
+        cmd_req.zcl_basic_cmd.src_endpoint =
+            ESP_ZB_GATEWAY_ENDPOINT;
+
+        cmd_req.address_mode =
+            ESP_ZB_APS_ADDR_MODE_16_ENDP_PRESENT;
+
+        cmd_req.on_off_cmd_id =
+            state ?
+            ESP_ZB_ZCL_CMD_ON_OFF_ON_ID :
+            ESP_ZB_ZCL_CMD_ON_OFF_OFF_ID;
+
+        ESP_LOGI(
+            TAG,
+            "Zigbee ON/OFF: addr=0x%04X ep=%u state=%u",
+            device->short_addr,
+            endpoint,
+            state);
+
+        esp_zb_lock_acquire(
+            portMAX_DELAY);
+
+        esp_err_t err =
+            esp_zb_zcl_on_off_cmd_req(
+                &cmd_req);
+
+        esp_zb_lock_release();
+
+        if (err != ESP_OK)
+            return err;
+
+        /*
+         * Optimistic cache update.
+         *
+         * The actual Zigbee report remains authoritative.
+         */
+        ep_ctx->device_t.last_state =
+            ep_ctx->device_t.state;
+
+        ep_ctx->device_t.state =
+            state;
+
+        return ESP_OK;
+    }
+
+    /* ====================================================================== */
+    /* BRIGHTNESS                                                              */
+    /* ====================================================================== */
+
+    if (strcmp(capability, "brightness") == 0 ||
+        strcmp(capability, "level") == 0) {
+
+        cJSON *brightness =
+            cJSON_GetObjectItem(
+                arguments,
+                "brightness");
+
+        if (!cJSON_IsNumber(brightness))
+            return ESP_ERR_INVALID_ARG;
+
+        int brightness_percent =
+            brightness->valueint;
+
+        if (brightness_percent < 0 ||
+            brightness_percent > 100)
+            return ESP_ERR_INVALID_ARG;
+
+        /*
+         * Cloud API = 0..100
+         *
+         * Zigbee Level Control = 0..254
+         */
+        uint8_t level;
+
+        if (brightness_percent == 0) {
+
+            level = 0;
+
+        } else {
+
+            level =
+                (uint8_t)(
+                    ((brightness_percent * 254) +
+                     50) / 100);
+
+            if (level > 254)
+                level = 254;
+        }
+
+        esp_zb_zcl_move_to_level_cmd_t cmd_req = {0};
+
+        cmd_req.zcl_basic_cmd.src_endpoint =
+            ESP_ZB_GATEWAY_ENDPOINT;
+
+        cmd_req.zcl_basic_cmd.dst_addr_u.addr_short =
+            device->short_addr;
+
+        cmd_req.zcl_basic_cmd.dst_endpoint =
+            endpoint;
+
+        cmd_req.address_mode =
+            ESP_ZB_APS_ADDR_MODE_16_ENDP_PRESENT;
+
+        cmd_req.level =
+            level;
+
+        /*
+         * 0xFFFF = use device/default transition time.
+         */
+        cmd_req.transition_time =
+            0xFFFF;
+
+        ESP_LOGI(
+            TAG,
+            "Zigbee BRIGHTNESS: addr=0x%04X ep=%u brightness=%d%% level=%u",
+            device->short_addr,
+            endpoint,
+            brightness_percent,
+            level);
+
+        esp_zb_lock_acquire(
+            portMAX_DELAY);
+
+        esp_err_t err =
+            esp_zb_zcl_level_move_to_level_with_onoff_cmd_req(
+                &cmd_req);
+
+        esp_zb_lock_release();
+
+        if (err != ESP_OK)
+            return err;
+
+        ep_ctx->device_t.last_level =
+            ep_ctx->device_t.level;
+
+        ep_ctx->device_t.level =
+            (uint8_t)brightness_percent;
+
+        /*
+         * If brightness is zero, many dimmers turn off.
+         * Keep this only as an optimistic local state.
+         */
+        if (brightness_percent == 0)
+            ep_ctx->device_t.state = false;
+
+        return ESP_OK;
+    }
+
+    /*
+     * The remaining capabilities are intentionally delegated to your existing
+     * Zigbee application layer. This prevents this UART file from inventing
+     * device-specific Tuya/curtain/fan/thermostat command formats.
+     */
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Remove Zigbee device                                                        */
+/* -------------------------------------------------------------------------- */
+
+esp_err_t nuos_uart_remove_zigbee_device(
+    uint16_t device_index)
+{
+    if (device_index >= devices_count)
+        return ESP_ERR_INVALID_ARG;
+
+    if (g_pending_remove.active)
+        return ESP_ERR_INVALID_STATE;
+
+    node_module_t *device =
+        &device_array[device_index];
+
+    /*
+     * Save complete device information because the actual
+     * removal callback is asynchronous.
+     */
+    memcpy(
+        &g_pending_remove.device,
+        device,
+        sizeof(node_module_t));
+
+    g_pending_remove.index =
+        device_index;
+
+    g_pending_remove.active =
+        true;
+
+    /*
+     * Create Zigbee Management Leave Request.
+     */
+    esp_zb_zdo_mgmt_leave_req_param_t leave_req = {0};
+
+    /*
+     * Network address of the device to which the
+     * Leave request is sent.
+     */
+    leave_req.dst_nwk_addr =
+        device->short_addr;
+
+    /*
+     * IEEE address of the device being removed.
+     */
+    memcpy(
+        leave_req.device_address,
+        device->ieee_addr,
+        sizeof(esp_zb_ieee_addr_t));
+
+    /*
+     * Do not remove children.
+     */
+    leave_req.remove_children = 0;
+
+    /*
+     * Do NOT allow the device to automatically rejoin.
+     */
+    leave_req.rejoin = 0;
+
+    ESP_LOGI(
+        TAG,
+        "Sending Zigbee Mgmt_Leave_req: "
+        "short=0x%04X",
+        device->short_addr);
+
+    /*
+     * ESP-Zigbee API in your SDK returns VOID.
+     *
+     * Therefore DO NOT do:
+     *
+     * esp_err_t err = esp_zb_zdo_device_leave_req(...);
+     *
+     * Just call it.
+     */
+    esp_zb_lock_acquire(
+        portMAX_DELAY);
+
+    esp_zb_zdo_device_leave_req(
+        &leave_req,
+        uart_device_leave_callback,
+        (void *)(uintptr_t)device_index);
+
+    esp_zb_lock_release();
+
+    /*
+     * The actual result will be handled asynchronously
+     * inside uart_device_leave_callback().
+     */
+    return ESP_OK;
+}

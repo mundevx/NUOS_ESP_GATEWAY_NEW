@@ -1,0 +1,95 @@
+#ifndef NUOS_UART_PROTOCOL_H
+#define NUOS_UART_PROTOCOL_H
+
+#include <stdint.h>
+#include <stdbool.h>
+#include "esp_err.h"
+#include "esp_zigbee_type.h"
+#include "cJSON.h"
+#include "common.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#define UART_PROTO_SOF          0x7E
+#define UART_PROTO_VERSION      0x01
+
+#define UART_TYPE_COMMAND       0x01
+#define UART_TYPE_ACK           0x02
+#define UART_TYPE_RESPONSE      0x03
+#define UART_TYPE_EVENT         0x04
+#define UART_TYPE_ERROR         0x05
+
+#define TYPE_DATA_START         0x06
+#define TYPE_DATA_CHUNK         0x07
+#define TYPE_DATA_END           0x08
+
+#define UART_PROTO_MAX_PAYLOAD  2048 /* legacy RX protocol buffer */
+
+/* NUOS Ecosystem API V2: capability/property based commands. */
+#define NUOS_API_VERSION_V2      "2.0"
+
+void uart_init(void);
+
+esp_err_t sendFrame(uint8_t type, uint16_t seq, const char *json);
+
+/* H2 -> C3 events */
+void uart_send_device_added_event(uint16_t device_index);
+void uart_send_device_removed_event(const node_module_t *device);
+void uart_send_device_rejoined_event(uint16_t device_index);
+void uart_send_connectivity_event(uint16_t device_index, bool online);
+void uart_send_property_changed_bool(uint16_t device_index, uint8_t ep,
+                                     const char *capability,
+                                     const char *property,
+                                     bool value);
+void uart_send_property_changed_number(uint16_t device_index, uint8_t ep,
+                                       const char *capability,
+                                       const char *property,
+                                       double value);
+
+/* Call this from your Zigbee attribute/report callback for generic values. */
+void uart_send_attribute_changed(uint16_t device_index, uint8_t ep,
+                                 uint16_t cluster_id, uint16_t attr_id,
+                                 const char *capability,
+                                 const char *property,
+                                 double value);
+
+/*
+ * Zigbee/application hooks.
+ * Implement these in your Zigbee application if you want the generic
+ * UART command handler to execute the actual Zigbee operation.
+ */
+esp_err_t nuos_uart_control_device(uint16_t device_index,
+                                   uint8_t endpoint,
+                                   const char *capability,
+                                   const char *command,
+                                   cJSON *arguments);
+
+esp_err_t nuos_uart_remove_zigbee_device(uint16_t device_index);
+
+int nuos_add_new_zigbee_device_to_database(uint16_t short_addr,
+                                           esp_zb_ieee_addr_t ieee_addr);
+
+/* Existing commissioning functions in your project. */
+void nuos_start_commissioning(uint16_t timeout_sec);
+void nuos_stop_commissioning(void);
+
+/* Call this from your Zigbee join/rejoin callback. */
+void on_device_joined_fxn(uint16_t short_addr,
+                          esp_zb_ieee_addr_t ieee_addr);
+
+/* Call this when Zigbee detects a leave/remove. */
+void on_device_removed_fxn(esp_zb_ieee_addr_t ieee_addr);
+
+/* Call this when your Zigbee health/availability logic changes state. */
+void on_device_connectivity_changed(uint16_t device_index, bool online);
+
+/* Persist one device after room/name/short-address changes. */
+esp_err_t uart_save_device_to_nvs(uint16_t device_index);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

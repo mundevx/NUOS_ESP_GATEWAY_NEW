@@ -1,13 +1,13 @@
 {
     "version":            "1.2",
     "project_name":       "esp_zigbee_gateway",
-    "project_version":    "905a707-dirty",
-    "project_path":       "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway",
+    "project_version":    "355e575-dirty",
+    "project_path":       "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new",
     "idf_path":           "C:/Users/procu/esp/v5.5/esp-idf",
-    "build_dir":          "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build",
-    "config_file":        "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/sdkconfig",
-    "config_defaults":    "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/sdkconfig.defaults",
-    "bootloader_elf":     "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/bootloader/bootloader.elf",
+    "build_dir":          "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build",
+    "config_file":        "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/sdkconfig",
+    "config_defaults":    "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/sdkconfig.defaults",
+    "bootloader_elf":     "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/bootloader/bootloader.elf",
     "app_elf":            "esp_zigbee_gateway.elf",
     "app_bin":            "esp_zigbee_gateway.bin",
     "build_type":         "flash_app",
@@ -21,12 +21,12 @@
     "monitor_toolprefix": "riscv32-esp-elf-",
     "c_compiler":         "C:/Users/procu/.espressif/tools/riscv32-esp-elf/esp-14.2.0_20241119/riscv32-esp-elf/bin/riscv32-esp-elf-gcc.exe",
     "config_environment" : {
-        "COMPONENT_KCONFIGS" : "C:/Users/procu/esp/v5.5/esp-idf/components/app_trace/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/bt/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/console/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/driver/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/efuse/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp-tls/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_adc/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_coex/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_common/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_ana_cmpr/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_bitscrambler/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_cam/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_dac/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_gpio/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_gptimer/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_i2c/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_i2s/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_isp/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_jpeg/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_ledc/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_mcpwm/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_parlio/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_pcnt/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_rmt/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_sdm/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_spi/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_touch_sens/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_tsens/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_twai/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_uart/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_usb_serial_jtag/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_eth/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_event/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_gdbstub/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_hid/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_http_client/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_http_server/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_https_ota/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_https_server/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_lcd/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_mm/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_netif/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_partition/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_phy/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_pm/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_psram/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_ringbuf/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_rom/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_security/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_system/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_timer/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_wifi/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/espcoredump/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/fatfs/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/freertos/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/hal/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/heap/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/ieee802154/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/log/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/lwip/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/mbedtls/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/mqtt/esp-mqtt/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/newlib/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/nvs_flash/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/nvs_sec_provider/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/openthread/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/protocomm/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/pthread/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/soc/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/spi_flash/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/spiffs/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/tcp_transport/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/ulp/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/unity/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/usb/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/vfs/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/wear_levelling/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/wifi_provisioning/Kconfig;C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/managed_components/espressif__esp-serial-flasher/Kconfig;C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/managed_components/espressif__esp-zigbee-lib/Kconfig",
-        "COMPONENT_KCONFIGS_PROJBUILD" : "C:/Users/procu/esp/v5.5/esp-idf/components/bootloader/Kconfig.projbuild;C:/Users/procu/esp/v5.5/esp-idf/components/esp_app_format/Kconfig.projbuild;C:/Users/procu/esp/v5.5/esp-idf/components/esp_rom/Kconfig.projbuild;C:/Users/procu/esp/v5.5/esp-idf/components/esp_tee/Kconfig.projbuild;C:/Users/procu/esp/v5.5/esp-idf/components/esptool_py/Kconfig.projbuild;C:/Users/procu/esp/v5.5/esp-idf/components/partition_table/Kconfig.projbuild;C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/main/Kconfig.projbuild;C:/Users/procu/esp/v5.5/esp-idf/examples/common_components/protocol_examples_common/Kconfig.projbuild"
+        "COMPONENT_KCONFIGS" : "C:/Users/procu/esp/v5.5/esp-idf/components/app_trace/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/bt/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/console/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/driver/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/efuse/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp-tls/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_adc/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_coex/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_common/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_ana_cmpr/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_bitscrambler/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_cam/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_dac/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_gpio/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_gptimer/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_i2c/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_i2s/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_isp/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_jpeg/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_ledc/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_mcpwm/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_parlio/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_pcnt/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_rmt/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_sdm/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_spi/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_touch_sens/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_tsens/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_twai/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_uart/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_usb_serial_jtag/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_eth/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_event/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_gdbstub/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_hid/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_http_client/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_http_server/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_https_ota/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_https_server/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_lcd/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_mm/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_netif/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_partition/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_phy/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_pm/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_psram/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_ringbuf/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_rom/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_security/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_system/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_timer/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/esp_wifi/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/espcoredump/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/fatfs/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/freertos/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/hal/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/heap/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/ieee802154/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/log/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/lwip/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/mbedtls/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/mqtt/esp-mqtt/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/newlib/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/nvs_flash/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/nvs_sec_provider/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/openthread/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/protocomm/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/pthread/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/soc/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/spi_flash/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/spiffs/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/tcp_transport/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/ulp/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/unity/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/usb/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/vfs/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/wear_levelling/Kconfig;C:/Users/procu/esp/v5.5/esp-idf/components/wifi_provisioning/Kconfig;C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/managed_components/espressif__esp-serial-flasher/Kconfig;C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/managed_components/espressif__esp-zigbee-lib/Kconfig",
+        "COMPONENT_KCONFIGS_PROJBUILD" : "C:/Users/procu/esp/v5.5/esp-idf/components/bootloader/Kconfig.projbuild;C:/Users/procu/esp/v5.5/esp-idf/components/esp_app_format/Kconfig.projbuild;C:/Users/procu/esp/v5.5/esp-idf/components/esp_rom/Kconfig.projbuild;C:/Users/procu/esp/v5.5/esp-idf/components/esp_tee/Kconfig.projbuild;C:/Users/procu/esp/v5.5/esp-idf/components/esptool_py/Kconfig.projbuild;C:/Users/procu/esp/v5.5/esp-idf/components/partition_table/Kconfig.projbuild;C:/Users/procu/esp/v5.5/esp-idf/examples/common_components/protocol_examples_common/Kconfig.projbuild"
     },
     "common_component_reqs": [ "cxx", "newlib", "freertos", "esp_hw_support", "heap", "log", "soc", "hal", "esp_rom", "esp_common", "esp_system", "riscv" ],
-    "build_components" : [ "app_trace", "app_update", "bootloader", "bootloader_support", "bt", "cmock", "console", "cxx", "driver", "efuse", "esp-tls", "esp_adc", "esp_app_format", "esp_bootloader_format", "esp_coex", "esp_common", "esp_driver_ana_cmpr", "esp_driver_bitscrambler", "esp_driver_cam", "esp_driver_dac", "esp_driver_gpio", "esp_driver_gptimer", "esp_driver_i2c", "esp_driver_i2s", "esp_driver_isp", "esp_driver_jpeg", "esp_driver_ledc", "esp_driver_mcpwm", "esp_driver_parlio", "esp_driver_pcnt", "esp_driver_ppa", "esp_driver_rmt", "esp_driver_sdio", "esp_driver_sdm", "esp_driver_sdmmc", "esp_driver_sdspi", "esp_driver_spi", "esp_driver_touch_sens", "esp_driver_tsens", "esp_driver_twai", "esp_driver_uart", "esp_driver_usb_serial_jtag", "esp_eth", "esp_event", "esp_gdbstub", "esp_hid", "esp_http_client", "esp_http_server", "esp_https_ota", "esp_https_server", "esp_hw_support", "esp_lcd", "esp_local_ctrl", "esp_mm", "esp_netif", "esp_netif_stack", "esp_partition", "esp_phy", "esp_pm", "esp_psram", "esp_ringbuf", "esp_rom", "esp_security", "esp_system", "esp_tee", "esp_timer", "esp_vfs_console", "esp_wifi", "espcoredump", "espressif__esp-serial-flasher", "espressif__esp-zboss-lib", "espressif__esp-zigbee-lib", "espressif__esp_rcp_update", "esptool_py", "fatfs", "freertos", "hal", "heap", "http_parser", "idf_test", "ieee802154", "json", "log", "lwip", "main", "mbedtls", "mqtt", "newlib", "nvs_flash", "nvs_sec_provider", "openthread", "partition_table", "protobuf-c", "protocol_examples_common", "protocomm", "pthread", "riscv", "rt", "sdmmc", "soc", "spi_flash", "spiffs", "tcp_transport", "ulp", "unity", "usb", "vfs", "wear_levelling", "wifi_provisioning", "wpa_supplicant", "" ],
-    "build_component_paths" : [ "C:/Users/procu/esp/v5.5/esp-idf/components/app_trace", "C:/Users/procu/esp/v5.5/esp-idf/components/app_update", "C:/Users/procu/esp/v5.5/esp-idf/components/bootloader", "C:/Users/procu/esp/v5.5/esp-idf/components/bootloader_support", "C:/Users/procu/esp/v5.5/esp-idf/components/bt", "C:/Users/procu/esp/v5.5/esp-idf/components/cmock", "C:/Users/procu/esp/v5.5/esp-idf/components/console", "C:/Users/procu/esp/v5.5/esp-idf/components/cxx", "C:/Users/procu/esp/v5.5/esp-idf/components/driver", "C:/Users/procu/esp/v5.5/esp-idf/components/efuse", "C:/Users/procu/esp/v5.5/esp-idf/components/esp-tls", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_adc", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_app_format", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_bootloader_format", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_coex", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_common", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_ana_cmpr", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_bitscrambler", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_cam", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_dac", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_gpio", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_gptimer", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_i2c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_i2s", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_isp", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_jpeg", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_ledc", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_mcpwm", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_parlio", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_pcnt", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_ppa", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_rmt", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_sdio", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_sdm", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_sdmmc", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_sdspi", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_spi", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_touch_sens", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_tsens", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_twai", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_uart", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_usb_serial_jtag", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_eth", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_event", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_gdbstub", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hid", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_http_client", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_http_server", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_https_ota", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_https_server", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_lcd", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_local_ctrl", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_mm", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_netif", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_netif_stack", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_partition", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_phy", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_pm", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_psram", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_ringbuf", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_rom", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_security", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_system", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_tee", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_timer", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_vfs_console", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_wifi", "C:/Users/procu/esp/v5.5/esp-idf/components/espcoredump", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/managed_components/espressif__esp-serial-flasher", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/managed_components/espressif__esp-zboss-lib", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/managed_components/espressif__esp-zigbee-lib", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/managed_components/espressif__esp_rcp_update", "C:/Users/procu/esp/v5.5/esp-idf/components/esptool_py", "C:/Users/procu/esp/v5.5/esp-idf/components/fatfs", "C:/Users/procu/esp/v5.5/esp-idf/components/freertos", "C:/Users/procu/esp/v5.5/esp-idf/components/hal", "C:/Users/procu/esp/v5.5/esp-idf/components/heap", "C:/Users/procu/esp/v5.5/esp-idf/components/http_parser", "C:/Users/procu/esp/v5.5/esp-idf/components/idf_test", "C:/Users/procu/esp/v5.5/esp-idf/components/ieee802154", "C:/Users/procu/esp/v5.5/esp-idf/components/json", "C:/Users/procu/esp/v5.5/esp-idf/components/log", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/main", "C:/Users/procu/esp/v5.5/esp-idf/components/mbedtls", "C:/Users/procu/esp/v5.5/esp-idf/components/mqtt", "C:/Users/procu/esp/v5.5/esp-idf/components/newlib", "C:/Users/procu/esp/v5.5/esp-idf/components/nvs_flash", "C:/Users/procu/esp/v5.5/esp-idf/components/nvs_sec_provider", "C:/Users/procu/esp/v5.5/esp-idf/components/openthread", "C:/Users/procu/esp/v5.5/esp-idf/components/partition_table", "C:/Users/procu/esp/v5.5/esp-idf/components/protobuf-c", "C:/Users/procu/esp/v5.5/esp-idf/examples/common_components/protocol_examples_common", "C:/Users/procu/esp/v5.5/esp-idf/components/protocomm", "C:/Users/procu/esp/v5.5/esp-idf/components/pthread", "C:/Users/procu/esp/v5.5/esp-idf/components/riscv", "C:/Users/procu/esp/v5.5/esp-idf/components/rt", "C:/Users/procu/esp/v5.5/esp-idf/components/sdmmc", "C:/Users/procu/esp/v5.5/esp-idf/components/soc", "C:/Users/procu/esp/v5.5/esp-idf/components/spi_flash", "C:/Users/procu/esp/v5.5/esp-idf/components/spiffs", "C:/Users/procu/esp/v5.5/esp-idf/components/tcp_transport", "C:/Users/procu/esp/v5.5/esp-idf/components/ulp", "C:/Users/procu/esp/v5.5/esp-idf/components/unity", "C:/Users/procu/esp/v5.5/esp-idf/components/usb", "C:/Users/procu/esp/v5.5/esp-idf/components/vfs", "C:/Users/procu/esp/v5.5/esp-idf/components/wear_levelling", "C:/Users/procu/esp/v5.5/esp-idf/components/wifi_provisioning", "C:/Users/procu/esp/v5.5/esp-idf/components/wpa_supplicant", "" ],
+    "build_components" : [ "app_trace", "app_update", "bootloader", "bootloader_support", "bt", "cmock", "console", "cxx", "driver", "efuse", "esp-tls", "esp_adc", "esp_app_format", "esp_bootloader_format", "esp_coex", "esp_common", "esp_driver_ana_cmpr", "esp_driver_bitscrambler", "esp_driver_cam", "esp_driver_dac", "esp_driver_gpio", "esp_driver_gptimer", "esp_driver_i2c", "esp_driver_i2s", "esp_driver_isp", "esp_driver_jpeg", "esp_driver_ledc", "esp_driver_mcpwm", "esp_driver_parlio", "esp_driver_pcnt", "esp_driver_ppa", "esp_driver_rmt", "esp_driver_sdio", "esp_driver_sdm", "esp_driver_sdmmc", "esp_driver_sdspi", "esp_driver_spi", "esp_driver_touch_sens", "esp_driver_tsens", "esp_driver_twai", "esp_driver_uart", "esp_driver_usb_serial_jtag", "esp_eth", "esp_event", "esp_gdbstub", "esp_hid", "esp_http_client", "esp_http_server", "esp_https_ota", "esp_https_server", "esp_hw_support", "esp_lcd", "esp_local_ctrl", "esp_mm", "esp_netif", "esp_netif_stack", "esp_partition", "esp_phy", "esp_pm", "esp_psram", "esp_ringbuf", "esp_rom", "esp_security", "esp_system", "esp_tee", "esp_timer", "esp_vfs_console", "esp_wifi", "espcoredump", "espressif__esp-serial-flasher", "espressif__esp-zboss-lib", "espressif__esp-zigbee-lib", "espressif__esp_rcp_update", "espressif__led_strip", "esptool_py", "fatfs", "freertos", "hal", "heap", "http_parser", "idf_test", "ieee802154", "json", "log", "lwip", "main", "mbedtls", "mqtt", "newlib", "nvs_flash", "nvs_sec_provider", "openthread", "partition_table", "protobuf-c", "protocol_examples_common", "protocomm", "pthread", "riscv", "rt", "sdmmc", "soc", "spi_flash", "spiffs", "tcp_transport", "ulp", "unity", "usb", "vfs", "wear_levelling", "wifi_provisioning", "wpa_supplicant", "" ],
+    "build_component_paths" : [ "C:/Users/procu/esp/v5.5/esp-idf/components/app_trace", "C:/Users/procu/esp/v5.5/esp-idf/components/app_update", "C:/Users/procu/esp/v5.5/esp-idf/components/bootloader", "C:/Users/procu/esp/v5.5/esp-idf/components/bootloader_support", "C:/Users/procu/esp/v5.5/esp-idf/components/bt", "C:/Users/procu/esp/v5.5/esp-idf/components/cmock", "C:/Users/procu/esp/v5.5/esp-idf/components/console", "C:/Users/procu/esp/v5.5/esp-idf/components/cxx", "C:/Users/procu/esp/v5.5/esp-idf/components/driver", "C:/Users/procu/esp/v5.5/esp-idf/components/efuse", "C:/Users/procu/esp/v5.5/esp-idf/components/esp-tls", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_adc", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_app_format", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_bootloader_format", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_coex", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_common", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_ana_cmpr", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_bitscrambler", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_cam", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_dac", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_gpio", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_gptimer", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_i2c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_i2s", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_isp", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_jpeg", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_ledc", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_mcpwm", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_parlio", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_pcnt", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_ppa", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_rmt", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_sdio", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_sdm", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_sdmmc", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_sdspi", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_spi", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_touch_sens", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_tsens", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_twai", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_uart", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_usb_serial_jtag", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_eth", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_event", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_gdbstub", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hid", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_http_client", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_http_server", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_https_ota", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_https_server", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_lcd", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_local_ctrl", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_mm", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_netif", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_netif_stack", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_partition", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_phy", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_pm", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_psram", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_ringbuf", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_rom", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_security", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_system", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_tee", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_timer", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_vfs_console", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_wifi", "C:/Users/procu/esp/v5.5/esp-idf/components/espcoredump", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/managed_components/espressif__esp-serial-flasher", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/managed_components/espressif__esp-zboss-lib", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/managed_components/espressif__esp-zigbee-lib", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/managed_components/espressif__esp_rcp_update", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/managed_components/espressif__led_strip", "C:/Users/procu/esp/v5.5/esp-idf/components/esptool_py", "C:/Users/procu/esp/v5.5/esp-idf/components/fatfs", "C:/Users/procu/esp/v5.5/esp-idf/components/freertos", "C:/Users/procu/esp/v5.5/esp-idf/components/hal", "C:/Users/procu/esp/v5.5/esp-idf/components/heap", "C:/Users/procu/esp/v5.5/esp-idf/components/http_parser", "C:/Users/procu/esp/v5.5/esp-idf/components/idf_test", "C:/Users/procu/esp/v5.5/esp-idf/components/ieee802154", "C:/Users/procu/esp/v5.5/esp-idf/components/json", "C:/Users/procu/esp/v5.5/esp-idf/components/log", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/main", "C:/Users/procu/esp/v5.5/esp-idf/components/mbedtls", "C:/Users/procu/esp/v5.5/esp-idf/components/mqtt", "C:/Users/procu/esp/v5.5/esp-idf/components/newlib", "C:/Users/procu/esp/v5.5/esp-idf/components/nvs_flash", "C:/Users/procu/esp/v5.5/esp-idf/components/nvs_sec_provider", "C:/Users/procu/esp/v5.5/esp-idf/components/openthread", "C:/Users/procu/esp/v5.5/esp-idf/components/partition_table", "C:/Users/procu/esp/v5.5/esp-idf/components/protobuf-c", "C:/Users/procu/esp/v5.5/esp-idf/examples/common_components/protocol_examples_common", "C:/Users/procu/esp/v5.5/esp-idf/components/protocomm", "C:/Users/procu/esp/v5.5/esp-idf/components/pthread", "C:/Users/procu/esp/v5.5/esp-idf/components/riscv", "C:/Users/procu/esp/v5.5/esp-idf/components/rt", "C:/Users/procu/esp/v5.5/esp-idf/components/sdmmc", "C:/Users/procu/esp/v5.5/esp-idf/components/soc", "C:/Users/procu/esp/v5.5/esp-idf/components/spi_flash", "C:/Users/procu/esp/v5.5/esp-idf/components/spiffs", "C:/Users/procu/esp/v5.5/esp-idf/components/tcp_transport", "C:/Users/procu/esp/v5.5/esp-idf/components/ulp", "C:/Users/procu/esp/v5.5/esp-idf/components/unity", "C:/Users/procu/esp/v5.5/esp-idf/components/usb", "C:/Users/procu/esp/v5.5/esp-idf/components/vfs", "C:/Users/procu/esp/v5.5/esp-idf/components/wear_levelling", "C:/Users/procu/esp/v5.5/esp-idf/components/wifi_provisioning", "C:/Users/procu/esp/v5.5/esp-idf/components/wpa_supplicant", "" ],
     "build_component_info" : {
         "app_trace": {
             "alias": "idf::app_trace",
@@ -39,7 +39,7 @@
             "priv_reqs": [ "esp_driver_gptimer", "esp_driver_gpio", "esp_driver_uart" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/app_trace/libapp_trace.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/app_trace/libapp_trace.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/app_trace/app_trace.c", "C:/Users/procu/esp/v5.5/esp-idf/components/app_trace/app_trace_util.c", "C:/Users/procu/esp/v5.5/esp-idf/components/app_trace/host_file_io.c", "C:/Users/procu/esp/v5.5/esp-idf/components/app_trace/port/port_uart.c" ],
             "include_dirs": [ "include" ]
         },
@@ -54,7 +54,7 @@
             "priv_reqs": [ "esptool_py", "efuse", "spi_flash" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/app_update/libapp_update.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/app_update/libapp_update.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/app_update/esp_ota_ops.c", "C:/Users/procu/esp/v5.5/esp-idf/components/app_update/esp_ota_app_desc.c" ],
             "include_dirs": [ "include" ]
         },
@@ -84,7 +84,7 @@
             "priv_reqs": [ "spi_flash", "mbedtls", "efuse", "heap", "esp_bootloader_format", "esp_app_format" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/bootloader_support/libbootloader_support.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/bootloader_support/libbootloader_support.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/bootloader_support/src/bootloader_common.c", "C:/Users/procu/esp/v5.5/esp-idf/components/bootloader_support/src/bootloader_common_loader.c", "C:/Users/procu/esp/v5.5/esp-idf/components/bootloader_support/src/bootloader_clock_init.c", "C:/Users/procu/esp/v5.5/esp-idf/components/bootloader_support/src/bootloader_mem.c", "C:/Users/procu/esp/v5.5/esp-idf/components/bootloader_support/src/bootloader_random.c", "C:/Users/procu/esp/v5.5/esp-idf/components/bootloader_support/src/bootloader_efuse.c", "C:/Users/procu/esp/v5.5/esp-idf/components/bootloader_support/src/flash_encrypt.c", "C:/Users/procu/esp/v5.5/esp-idf/components/bootloader_support/src/secure_boot.c", "C:/Users/procu/esp/v5.5/esp-idf/components/bootloader_support/src/bootloader_random_esp32h2.c", "C:/Users/procu/esp/v5.5/esp-idf/components/bootloader_support/bootloader_flash/src/bootloader_flash.c", "C:/Users/procu/esp/v5.5/esp-idf/components/bootloader_support/bootloader_flash/src/flash_qio_mode.c", "C:/Users/procu/esp/v5.5/esp-idf/components/bootloader_support/bootloader_flash/src/bootloader_flash_config_esp32h2.c", "C:/Users/procu/esp/v5.5/esp-idf/components/bootloader_support/src/bootloader_utility.c", "C:/Users/procu/esp/v5.5/esp-idf/components/bootloader_support/src/flash_partitions.c", "C:/Users/procu/esp/v5.5/esp-idf/components/bootloader_support/src/esp_image_format.c", "C:/Users/procu/esp/v5.5/esp-idf/components/bootloader_support/src/bootloader_sha.c", "C:/Users/procu/esp/v5.5/esp-idf/components/bootloader_support/src/esp32h2/secure_boot_secure_features.c" ],
             "include_dirs": [ "include", "bootloader_flash/include" ]
         },
@@ -114,7 +114,7 @@
             "priv_reqs": [],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/cmock/libcmock.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/cmock/libcmock.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/cmock/CMock/src/cmock.c" ],
             "include_dirs": [ "CMock/src" ]
         },
@@ -129,7 +129,7 @@
             "priv_reqs": [ "esp_driver_uart", "esp_driver_usb_serial_jtag" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/console/libconsole.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/console/libconsole.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/console/commands.c", "C:/Users/procu/esp/v5.5/esp-idf/components/console/esp_console_common.c", "C:/Users/procu/esp/v5.5/esp-idf/components/console/esp_console_repl_internal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/console/split_argv.c", "C:/Users/procu/esp/v5.5/esp-idf/components/console/linenoise/linenoise.c", "C:/Users/procu/esp/v5.5/esp-idf/components/console/esp_console_repl_chip.c", "C:/Users/procu/esp/v5.5/esp-idf/components/console/argtable3/arg_cmd.c", "C:/Users/procu/esp/v5.5/esp-idf/components/console/argtable3/arg_date.c", "C:/Users/procu/esp/v5.5/esp-idf/components/console/argtable3/arg_dbl.c", "C:/Users/procu/esp/v5.5/esp-idf/components/console/argtable3/arg_dstr.c", "C:/Users/procu/esp/v5.5/esp-idf/components/console/argtable3/arg_end.c", "C:/Users/procu/esp/v5.5/esp-idf/components/console/argtable3/arg_file.c", "C:/Users/procu/esp/v5.5/esp-idf/components/console/argtable3/arg_hashtable.c", "C:/Users/procu/esp/v5.5/esp-idf/components/console/argtable3/arg_int.c", "C:/Users/procu/esp/v5.5/esp-idf/components/console/argtable3/arg_lit.c", "C:/Users/procu/esp/v5.5/esp-idf/components/console/argtable3/arg_rem.c", "C:/Users/procu/esp/v5.5/esp-idf/components/console/argtable3/arg_rex.c", "C:/Users/procu/esp/v5.5/esp-idf/components/console/argtable3/arg_str.c", "C:/Users/procu/esp/v5.5/esp-idf/components/console/argtable3/arg_utils.c", "C:/Users/procu/esp/v5.5/esp-idf/components/console/argtable3/argtable3.c" ],
             "include_dirs": [ "C:/Users/procu/esp/v5.5/esp-idf/components/console" ]
         },
@@ -144,7 +144,7 @@
             "priv_reqs": [ "esp_system", "pthread" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/cxx/libcxx.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/cxx/libcxx.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/cxx/cxx_exception_stubs.cpp", "C:/Users/procu/esp/v5.5/esp-idf/components/cxx/cxx_guards.cpp", "C:/Users/procu/esp/v5.5/esp-idf/components/cxx/cxx_init.cpp" ],
             "include_dirs": []
         },
@@ -159,7 +159,7 @@
             "priv_reqs": [ "efuse", "esp_timer", "esp_mm" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/driver/libdriver.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/driver/libdriver.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/driver/deprecated/adc_legacy.c", "C:/Users/procu/esp/v5.5/esp-idf/components/driver/deprecated/adc_dma_legacy.c", "C:/Users/procu/esp/v5.5/esp-idf/components/driver/deprecated/timer_legacy.c", "C:/Users/procu/esp/v5.5/esp-idf/components/driver/i2c/i2c.c", "C:/Users/procu/esp/v5.5/esp-idf/components/driver/deprecated/i2s_legacy.c", "C:/Users/procu/esp/v5.5/esp-idf/components/driver/deprecated/mcpwm_legacy.c", "C:/Users/procu/esp/v5.5/esp-idf/components/driver/deprecated/pcnt_legacy.c", "C:/Users/procu/esp/v5.5/esp-idf/components/driver/deprecated/rmt_legacy.c", "C:/Users/procu/esp/v5.5/esp-idf/components/driver/deprecated/sigma_delta_legacy.c", "C:/Users/procu/esp/v5.5/esp-idf/components/driver/deprecated/rtc_temperature_legacy.c", "C:/Users/procu/esp/v5.5/esp-idf/components/driver/twai/twai.c" ],
             "include_dirs": [ "deprecated", "i2c/include", "touch_sensor/include", "twai/include" ]
         },
@@ -174,7 +174,7 @@
             "priv_reqs": [ "bootloader_support", "soc", "spi_flash", "esp_system", "esp_partition", "esp_app_format" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/efuse/libefuse.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/efuse/libefuse.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/efuse/esp32h2/esp_efuse_table.c", "C:/Users/procu/esp/v5.5/esp-idf/components/efuse/esp32h2/esp_efuse_table_v0.0_v1.1.c", "C:/Users/procu/esp/v5.5/esp-idf/components/efuse/esp32h2/esp_efuse_fields.c", "C:/Users/procu/esp/v5.5/esp-idf/components/efuse/esp32h2/esp_efuse_rtc_calib.c", "C:/Users/procu/esp/v5.5/esp-idf/components/efuse/esp32h2/esp_efuse_utility.c", "C:/Users/procu/esp/v5.5/esp-idf/components/efuse/src/esp_efuse_api.c", "C:/Users/procu/esp/v5.5/esp-idf/components/efuse/src/esp_efuse_fields.c", "C:/Users/procu/esp/v5.5/esp-idf/components/efuse/src/esp_efuse_utility.c", "C:/Users/procu/esp/v5.5/esp-idf/components/efuse/src/efuse_controller/keys/with_key_purposes/esp_efuse_api_key.c", "C:/Users/procu/esp/v5.5/esp-idf/components/efuse/src/esp_efuse_startup.c" ],
             "include_dirs": [ "include", "esp32h2/include" ]
         },
@@ -189,7 +189,7 @@
             "priv_reqs": [ "http_parser", "esp_timer", "lwip" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp-tls/libesp-tls.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp-tls/libesp-tls.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp-tls/esp_tls.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp-tls/esp-tls-crypto/esp_tls_crypto.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp-tls/esp_tls_error_capture.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp-tls/esp_tls_platform_port.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp-tls/esp_tls_mbedtls.c" ],
             "include_dirs": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp-tls", "esp-tls-crypto" ]
         },
@@ -204,7 +204,7 @@
             "priv_reqs": [ "esp_driver_gpio", "efuse", "esp_pm", "esp_ringbuf", "esp_mm", "driver" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_adc/libesp_adc.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_adc/libesp_adc.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_adc/adc_oneshot.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_adc/adc_common.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_adc/adc_cali.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_adc/adc_cali_curve_fitting.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_adc/deprecated/esp_adc_cal_common_legacy.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_adc/adc_continuous.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_adc/adc_monitor.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_adc/gdma/adc_dma.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_adc/adc_filter.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_adc/esp32h2/curve_fitting_coefficients.c" ],
             "include_dirs": [ "include", "interface", "esp32h2/include", "deprecated/include" ]
         },
@@ -219,7 +219,7 @@
             "priv_reqs": [],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_app_format/libesp_app_format.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_app_format/libesp_app_format.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_app_format/esp_app_desc.c" ],
             "include_dirs": [ "include" ]
         },
@@ -234,7 +234,7 @@
             "priv_reqs": [],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_bootloader_format/libesp_bootloader_format.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_bootloader_format/libesp_bootloader_format.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_bootloader_format/esp_bootloader_desc.c" ],
             "include_dirs": [ "include" ]
         },
@@ -264,7 +264,7 @@
             "priv_reqs": [],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_common/libesp_common.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_common/libesp_common.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_common/src/esp_err_to_name.c" ],
             "include_dirs": [ "include" ]
         },
@@ -279,7 +279,7 @@
             "priv_reqs": [ "esp_pm", "esp_driver_gpio" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_driver_ana_cmpr/libesp_driver_ana_cmpr.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_driver_ana_cmpr/libesp_driver_ana_cmpr.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_ana_cmpr/ana_cmpr.c" ],
             "include_dirs": [ "include" ]
         },
@@ -309,7 +309,7 @@
             "priv_reqs": [ "esp_driver_gpio" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_driver_cam/libesp_driver_cam.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_driver_cam/libesp_driver_cam.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_cam/esp_cam_ctlr.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_cam/dvp_share_ctrl.c" ],
             "include_dirs": [ "include", "interface" ]
         },
@@ -339,7 +339,7 @@
             "priv_reqs": [ "esp_pm" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_driver_gpio/libesp_driver_gpio.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_driver_gpio/libesp_driver_gpio.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_gpio/src/gpio.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_gpio/src/gpio_glitch_filter_ops.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_gpio/src/rtc_io.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_gpio/src/dedic_gpio.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_gpio/src/gpio_pin_glitch_filter.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_gpio/src/gpio_flex_glitch_filter.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_gpio/src/gpio_etm.c" ],
             "include_dirs": [ "include" ]
         },
@@ -354,7 +354,7 @@
             "priv_reqs": [],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_driver_gptimer/libesp_driver_gptimer.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_driver_gptimer/libesp_driver_gptimer.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_gptimer/src/gptimer.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_gptimer/src/gptimer_common.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_gptimer/src/gptimer_etm.c" ],
             "include_dirs": [ "include" ]
         },
@@ -369,7 +369,7 @@
             "priv_reqs": [ "esp_driver_gpio", "esp_pm", "esp_ringbuf" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_driver_i2c/libesp_driver_i2c.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_driver_i2c/libesp_driver_i2c.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_i2c/i2c_master.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_i2c/i2c_common.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_i2c/i2c_slave.c" ],
             "include_dirs": [ "include" ]
         },
@@ -384,7 +384,7 @@
             "priv_reqs": [ "esp_driver_gpio", "esp_pm", "esp_mm" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_driver_i2s/libesp_driver_i2s.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_driver_i2s/libesp_driver_i2s.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_i2s/i2s_common.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_i2s/i2s_std.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_i2s/i2s_pdm.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_i2s/i2s_tdm.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_i2s/i2s_etm.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_i2s/i2s_platform.c" ],
             "include_dirs": [ "include" ]
         },
@@ -429,7 +429,7 @@
             "priv_reqs": [ "esp_pm" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_driver_ledc/libesp_driver_ledc.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_driver_ledc/libesp_driver_ledc.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_ledc/src/ledc.c" ],
             "include_dirs": [ "include" ]
         },
@@ -444,7 +444,7 @@
             "priv_reqs": [ "esp_pm", "esp_driver_gpio" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_driver_mcpwm/libesp_driver_mcpwm.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_driver_mcpwm/libesp_driver_mcpwm.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_mcpwm/src/mcpwm_cap.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_mcpwm/src/mcpwm_cmpr.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_mcpwm/src/mcpwm_com.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_mcpwm/src/mcpwm_fault.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_mcpwm/src/mcpwm_gen.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_mcpwm/src/mcpwm_oper.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_mcpwm/src/mcpwm_sync.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_mcpwm/src/mcpwm_timer.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_mcpwm/src/mcpwm_etm.c" ],
             "include_dirs": [ "include" ]
         },
@@ -459,7 +459,7 @@
             "priv_reqs": [ "esp_pm", "esp_driver_gpio", "esp_mm", "esp_driver_bitscrambler" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_driver_parlio/libesp_driver_parlio.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_driver_parlio/libesp_driver_parlio.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_parlio/src/parlio_common.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_parlio/src/parlio_tx.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_parlio/src/parlio_rx.c" ],
             "include_dirs": [ "include" ]
         },
@@ -474,7 +474,7 @@
             "priv_reqs": [ "esp_pm", "esp_driver_gpio" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_driver_pcnt/libesp_driver_pcnt.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_driver_pcnt/libesp_driver_pcnt.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_pcnt/src/pulse_cnt.c" ],
             "include_dirs": [ "include" ]
         },
@@ -504,7 +504,7 @@
             "priv_reqs": [ "esp_pm", "esp_driver_gpio", "esp_driver_bitscrambler", "esp_mm" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_driver_rmt/libesp_driver_rmt.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_driver_rmt/libesp_driver_rmt.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_rmt/src/rmt_common.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_rmt/src/rmt_encoder.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_rmt/src/rmt_encoder_bytes.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_rmt/src/rmt_encoder_copy.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_rmt/src/rmt_encoder_simple.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_rmt/src/rmt_rx.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_rmt/src/rmt_tx.c" ],
             "include_dirs": [ "include" ]
         },
@@ -534,7 +534,7 @@
             "priv_reqs": [ "esp_pm", "esp_driver_gpio" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_driver_sdm/libesp_driver_sdm.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_driver_sdm/libesp_driver_sdm.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_sdm/src/sdm.c" ],
             "include_dirs": [ "include" ]
         },
@@ -564,7 +564,7 @@
             "priv_reqs": [ "esp_timer", "esp_mm" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_driver_sdspi/libesp_driver_sdspi.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_driver_sdspi/libesp_driver_sdspi.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_sdspi/src/sdspi_crc.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_sdspi/src/sdspi_host.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_sdspi/src/sdspi_transaction.c" ],
             "include_dirs": [ "include" ]
         },
@@ -579,7 +579,7 @@
             "priv_reqs": [ "esp_timer", "esp_mm", "esp_driver_gpio" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_driver_spi/libesp_driver_spi.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_driver_spi/libesp_driver_spi.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_spi/src/gpspi/spi_common.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_spi/src/gpspi/spi_master.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_spi/src/gpspi/spi_slave.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_spi/src/gpspi/spi_slave_hd.c" ],
             "include_dirs": [ "include" ]
         },
@@ -609,7 +609,7 @@
             "priv_reqs": [ "efuse" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_driver_tsens/libesp_driver_tsens.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_driver_tsens/libesp_driver_tsens.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_tsens/src/temperature_sensor.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_tsens/src/temperature_sensor_etm.c" ],
             "include_dirs": [ "include" ]
         },
@@ -624,7 +624,7 @@
             "priv_reqs": [ "esp_driver_gpio", "esp_pm" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_driver_twai/libesp_driver_twai.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_driver_twai/libesp_driver_twai.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_twai/esp_twai.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_twai/esp_twai_onchip.c" ],
             "include_dirs": [ "include" ]
         },
@@ -639,7 +639,7 @@
             "priv_reqs": [ "esp_pm", "esp_driver_gpio", "esp_ringbuf", "esp_mm" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_driver_uart/libesp_driver_uart.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_driver_uart/libesp_driver_uart.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_uart/src/uart.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_uart/src/uart_wakeup.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_uart/src/uhci.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_uart/src/uart_vfs.c" ],
             "include_dirs": [ "include" ]
         },
@@ -654,8 +654,8 @@
             "priv_reqs": [ "esp_driver_gpio", "esp_ringbuf", "esp_pm", "esp_timer" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_driver_usb_serial_jtag/libesp_driver_usb_serial_jtag.a",
-            "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_usb_serial_jtag/src/usb_serial_jtag.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_usb_serial_jtag/src/usb_serial_jtag_connection_monitor.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_usb_serial_jtag/src/usb_serial_jtag_vfs.c" ],
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_driver_usb_serial_jtag/libesp_driver_usb_serial_jtag.a",
+            "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_usb_serial_jtag/src/usb_serial_jtag.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_driver_usb_serial_jtag/src/usb_serial_jtag_connection_monitor.c" ],
             "include_dirs": [ "include" ]
         },
         "esp_eth": {
@@ -669,7 +669,7 @@
             "priv_reqs": [ "log", "esp_timer", "esp_driver_spi", "esp_driver_gpio" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_eth/libesp_eth.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_eth/libesp_eth.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_eth/src/esp_eth.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_eth/src/phy/esp_eth_phy_802_3.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_eth/src/esp_eth_netif_glue.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_eth/src/spi/w5500/esp_eth_mac_w5500.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_eth/src/spi/w5500/esp_eth_phy_w5500.c" ],
             "include_dirs": [ "include" ]
         },
@@ -684,7 +684,7 @@
             "priv_reqs": [ "esp_timer" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_event/libesp_event.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_event/libesp_event.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_event/default_event_loop.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_event/esp_event.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_event/esp_event_private.c" ],
             "include_dirs": [ "include" ]
         },
@@ -699,7 +699,7 @@
             "priv_reqs": [ "soc", "esp_rom", "esp_system" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_gdbstub/libesp_gdbstub.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_gdbstub/libesp_gdbstub.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_gdbstub/src/gdbstub.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_gdbstub/src/gdbstub_transport.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_gdbstub/src/packet.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_gdbstub/src/port/riscv/gdbstub_riscv.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_gdbstub/src/port/riscv/rv_decode.c" ],
             "include_dirs": [ "include" ]
         },
@@ -714,7 +714,7 @@
             "priv_reqs": [],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_hid/libesp_hid.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_hid/libesp_hid.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hid/src/esp_hidd.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hid/src/esp_hidh.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hid/src/esp_hid_common.c" ],
             "include_dirs": [ "include" ]
         },
@@ -729,7 +729,7 @@
             "priv_reqs": [ "tcp_transport", "http_parser" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_http_client/libesp_http_client.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_http_client/libesp_http_client.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_http_client/esp_http_client.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_http_client/lib/http_auth.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_http_client/lib/http_header.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_http_client/lib/http_utils.c" ],
             "include_dirs": [ "include" ]
         },
@@ -744,7 +744,7 @@
             "priv_reqs": [ "mbedtls", "lwip", "esp_timer" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_http_server/libesp_http_server.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_http_server/libesp_http_server.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_http_server/src/httpd_main.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_http_server/src/httpd_parse.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_http_server/src/httpd_sess.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_http_server/src/httpd_txrx.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_http_server/src/httpd_uri.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_http_server/src/httpd_ws.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_http_server/src/util/ctrl_sock.c" ],
             "include_dirs": [ "include" ]
         },
@@ -759,7 +759,7 @@
             "priv_reqs": [ "log", "app_update" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_https_ota/libesp_https_ota.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_https_ota/libesp_https_ota.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_https_ota/src/esp_https_ota.c" ],
             "include_dirs": [ "include" ]
         },
@@ -774,7 +774,7 @@
             "priv_reqs": [ "lwip" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_https_server/libesp_https_server.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_https_server/libesp_https_server.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_https_server/src/https_server.c" ],
             "include_dirs": [ "include" ]
         },
@@ -789,7 +789,7 @@
             "priv_reqs": [ "efuse", "spi_flash", "bootloader_support", "esp_security", "esp_driver_gpio", "esp_timer", "esp_pm", "esp_mm" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_hw_support/libesp_hw_support.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_hw_support/libesp_hw_support.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/cpu.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/port/esp32h2/esp_cpu_intr.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/esp_memory_utils.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/port/esp32h2/cpu_region_protect.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/esp_clk.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/clk_ctrl_os.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/hw_random.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/intr_alloc.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/mac_addr.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/periph_ctrl.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/revision.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/rtc_module.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/regi2c_ctrl.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/esp_gpio_reserve.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/sar_periph_ctrl_common.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/port/esp32h2/io_mux.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/port/esp32h2/esp_clk_tree.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/dma/esp_dma_utils.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/dma/gdma_link.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/spi_bus_lock.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/clk_utils.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/port/esp_clk_tree_common.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/spi_share_hw_ctrl.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/adc_share_hw_ctrl.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/sleep_retention.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/sleep_modem.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/sleep_modes.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/sleep_console.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/sleep_usb.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/sleep_gpio.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/sleep_event.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/sleep_system_peripheral.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/dma/gdma.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/deprecated/gdma_legacy.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/dma/gdma_sleep_retention.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/dma/gdma_etm.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/dma/esp_async_memcpy.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/dma/async_memcpy_gdma.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/port/esp32h2/systimer.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/esp_etm.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/port/pau_regdma.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/port/regdma_link.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/modem_clock.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/mspi_timing_tuning/mspi_timing_tuning.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/sleep_wake_stub.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/esp_clock_output.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/power_supply/brownout.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/power_supply/vbat.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/port/esp32h2/rtc_clk_init.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/port/esp32h2/rtc_clk.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/port/esp32h2/pmu_param.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/port/esp32h2/pmu_init.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/port/esp32h2/pmu_sleep.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/port/esp32h2/rtc_time.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/port/esp32h2/chip_info.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/port/esp32h2/sar_periph_ctrl.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/lowpower/port/esp32h2/sleep_cpu.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/lowpower/port/esp32h2/sleep_cpu_asm.S", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_hw_support/lowpower/port/esp32h2/sleep_clock.c" ],
             "include_dirs": [ "include", "include/soc", "include/soc/esp32h2", "dma/include", "ldo/include", "debug_probe/include", "mspi_timing_tuning/include", "mspi_timing_tuning/tuning_scheme_impl/include", "power_supply/include" ]
         },
@@ -804,7 +804,7 @@
             "priv_reqs": [ "esp_mm", "esp_psram", "esp_pm", "esp_driver_i2s" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_lcd/libesp_lcd.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_lcd/libesp_lcd.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_lcd/src/esp_lcd_common.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_lcd/src/esp_lcd_panel_io.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_lcd/src/esp_lcd_panel_nt35510.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_lcd/src/esp_lcd_panel_ssd1306.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_lcd/src/esp_lcd_panel_st7789.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_lcd/src/esp_lcd_panel_ops.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_lcd/i2c/esp_lcd_panel_io_i2c_v1.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_lcd/i2c/esp_lcd_panel_io_i2c_v2.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_lcd/spi/esp_lcd_panel_io_spi.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_lcd/parl/esp_lcd_panel_io_parl.c" ],
             "include_dirs": [ "include", "interface" ]
         },
@@ -819,7 +819,7 @@
             "priv_reqs": [ "protobuf-c", "esp_netif" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_local_ctrl/libesp_local_ctrl.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_local_ctrl/libesp_local_ctrl.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_local_ctrl/src/esp_local_ctrl.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_local_ctrl/src/esp_local_ctrl_handler.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_local_ctrl/proto-c/esp_local_ctrl.pb-c.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_local_ctrl/src/esp_local_ctrl_transport_httpd.c" ],
             "include_dirs": [ "include" ]
         },
@@ -834,7 +834,7 @@
             "priv_reqs": [ "heap", "spi_flash" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_mm/libesp_mm.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_mm/libesp_mm.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_mm/esp_mmu_map.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_mm/port/esp32h2/ext_mem_layout.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_mm/esp_cache_msync.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_mm/esp_cache_utils.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_mm/heap_align_hw.c" ],
             "include_dirs": [ "include" ]
         },
@@ -849,7 +849,7 @@
             "priv_reqs": [ "esp_netif_stack" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_netif/libesp_netif.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_netif/libesp_netif.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_netif/esp_netif_handlers.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_netif/esp_netif_objects.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_netif/esp_netif_defaults.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_netif/lwip/esp_netif_lwip.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_netif/lwip/esp_netif_sntp.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_netif/lwip/esp_netif_lwip_defaults.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_netif/lwip/netif/wlanif.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_netif/lwip/netif/ethernetif.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_netif/lwip/netif/esp_pbuf_ref.c" ],
             "include_dirs": [ "include" ]
         },
@@ -879,7 +879,7 @@
             "priv_reqs": [ "esp_system", "spi_flash", "partition_table", "bootloader_support", "app_update" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_partition/libesp_partition.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_partition/libesp_partition.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_partition/partition.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_partition/partition_target.c" ],
             "include_dirs": [ "include" ]
         },
@@ -894,7 +894,7 @@
             "priv_reqs": [ "nvs_flash", "esp_driver_gpio", "efuse", "esp_timer", "esp_wifi" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_phy/libesp_phy.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_phy/libesp_phy.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_phy/src/phy_override.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_phy/src/lib_printf.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_phy/src/phy_common.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_phy/src/phy_init_esp32hxx.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_phy/src/btbb_init.c" ],
             "include_dirs": [ "include", "esp32h2/include" ]
         },
@@ -909,7 +909,7 @@
             "priv_reqs": [ "esp_system", "esp_driver_gpio", "esp_timer" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_pm/libesp_pm.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_pm/libesp_pm.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_pm/pm_locks.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_pm/pm_trace.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_pm/pm_impl.c" ],
             "include_dirs": [ "include" ]
         },
@@ -939,7 +939,7 @@
             "priv_reqs": [],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_ringbuf/libesp_ringbuf.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_ringbuf/libesp_ringbuf.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_ringbuf/ringbuf.c" ],
             "include_dirs": [ "include" ]
         },
@@ -954,7 +954,7 @@
             "priv_reqs": [ "soc", "hal" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_rom/libesp_rom.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_rom/libesp_rom.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_rom/patches/esp_rom_sys.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_rom/patches/esp_rom_print.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_rom/patches/esp_rom_crc.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_rom/patches/esp_rom_uart.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_rom/patches/esp_rom_spiflash.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_rom/patches/esp_rom_efuse.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_rom/patches/esp_rom_gpio.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_rom/patches/esp_rom_regi2c_esp32h2.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_rom/patches/esp_rom_tlsf.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_rom/patches/esp_rom_multi_heap.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_rom/patches/esp_rom_systimer.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_rom/patches/esp_rom_wdt.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_rom/patches/esp_rom_usb_serial.c" ],
             "include_dirs": [ "include", "esp32h2/include", "esp32h2/include/esp32h2", "esp32h2" ]
         },
@@ -969,7 +969,7 @@
             "priv_reqs": [ "efuse", "esp_hw_support", "esp_system", "esp_timer" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_security/libesp_security.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_security/libesp_security.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_security/src/init.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_security/src/esp_hmac.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_security/src/esp_ds.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_security/src/esp_dpa_protection.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_security/src/esp_crypto_lock.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_security/src/esp_crypto_periph_clk.c" ],
             "include_dirs": [ "include" ]
         },
@@ -984,7 +984,7 @@
             "priv_reqs": [ "spi_flash", "esp_timer", "esp_mm", "bootloader_support", "esp_pm" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_system/libesp_system.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_system/libesp_system.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_system/esp_err.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_system/crosscore_int.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_system/esp_ipc.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_system/esp_system_console.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_system/freertos_hooks.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_system/int_wdt.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_system/panic.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_system/esp_system.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_system/startup.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_system/startup_funcs.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_system/system_time.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_system/stack_check.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_system/ubsan.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_system/xt_wdt.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_system/task_wdt/task_wdt.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_system/task_wdt/task_wdt_impl_timergroup.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_system/systick_etm.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_system/hw_stack_guard.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_system/port/cpu_start.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_system/port/panic_handler.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_system/port/esp_system_chip.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_system/port/image_process.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_system/port/arch/riscv/expression_with_stack.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_system/port/arch/riscv/panic_arch.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_system/port/arch/riscv/debug_helpers.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_system/port/arch/riscv/debug_stubs.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_system/port/soc/esp32h2/clk.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_system/port/soc/esp32h2/reset_reason.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_system/port/soc/esp32h2/system_internal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_system/port/soc/esp32h2/cache_err_int.c" ],
             "include_dirs": [ "include" ]
         },
@@ -1014,7 +1014,7 @@
             "priv_reqs": [],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_timer/libesp_timer.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_timer/libesp_timer.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_timer/src/esp_timer.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_timer/src/esp_timer_init.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_timer/src/ets_timer_legacy.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_timer/src/system_time.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_timer/src/esp_timer_impl_common.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_timer/src/esp_timer_impl_systimer.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_timer/src/esp_timer_etm.c" ],
             "include_dirs": [ "include" ]
         },
@@ -1029,7 +1029,7 @@
             "priv_reqs": [ "vfs", "esp_driver_uart", "esp_driver_usb_serial_jtag" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_vfs_console/libesp_vfs_console.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_vfs_console/libesp_vfs_console.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_vfs_console/vfs_console.c" ],
             "include_dirs": [ "include" ]
         },
@@ -1044,7 +1044,7 @@
             "priv_reqs": [ "esptool_py", "esp_pm", "esp_timer", "nvs_flash", "wpa_supplicant", "hal", "lwip", "esp_coex" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/esp_wifi/libesp_wifi.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/esp_wifi/libesp_wifi.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/esp_wifi/src/wifi_default.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_wifi/src/wifi_netif.c", "C:/Users/procu/esp/v5.5/esp-idf/components/esp_wifi/src/wifi_default_ap.c" ],
             "include_dirs": [ "include", "wifi_apps/nan_app/include" ]
         },
@@ -1059,7 +1059,7 @@
             "priv_reqs": [ "esp_partition", "spi_flash", "bootloader_support", "mbedtls", "esp_rom", "soc", "esp_system", "esp_driver_gpio" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/espcoredump/libespcoredump.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/espcoredump/libespcoredump.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/espcoredump/src/core_dump_init.c", "C:/Users/procu/esp/v5.5/esp-idf/components/espcoredump/src/core_dump_common.c", "C:/Users/procu/esp/v5.5/esp-idf/components/espcoredump/src/core_dump_flash.c", "C:/Users/procu/esp/v5.5/esp-idf/components/espcoredump/src/core_dump_uart.c", "C:/Users/procu/esp/v5.5/esp-idf/components/espcoredump/src/core_dump_elf.c", "C:/Users/procu/esp/v5.5/esp-idf/components/espcoredump/src/core_dump_binary.c", "C:/Users/procu/esp/v5.5/esp-idf/components/espcoredump/src/core_dump_sha.c", "C:/Users/procu/esp/v5.5/esp-idf/components/espcoredump/src/core_dump_crc.c", "C:/Users/procu/esp/v5.5/esp-idf/components/espcoredump/src/port/riscv/core_dump_port.c" ],
             "include_dirs": [ "include", "include/port/riscv" ]
         },
@@ -1067,22 +1067,22 @@
             "alias": "idf::espressif__esp-serial-flasher",
             "target": "___idf_espressif__esp-serial-flasher",
             "prefix": "idf",
-            "dir": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/managed_components/espressif__esp-serial-flasher",
+            "dir": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/managed_components/espressif__esp-serial-flasher",
             "type": "LIBRARY",
             "lib": "__idf_espressif__esp-serial-flasher",
             "reqs": [],
             "priv_reqs": [ "driver", "esp_timer" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/espressif__esp-serial-flasher/libespressif__esp-serial-flasher.a",
-            "sources": [ "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/managed_components/espressif__esp-serial-flasher/src/esp_loader.c", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/managed_components/espressif__esp-serial-flasher/src/esp_targets.c", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/managed_components/espressif__esp-serial-flasher/src/md5_hash.c", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/managed_components/espressif__esp-serial-flasher/src/protocol.c", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/managed_components/espressif__esp-serial-flasher/src/slip.c", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/managed_components/espressif__esp-serial-flasher/port/esp32_port.c" ],
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/espressif__esp-serial-flasher/libespressif__esp-serial-flasher.a",
+            "sources": [ "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/managed_components/espressif__esp-serial-flasher/src/esp_loader.c", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/managed_components/espressif__esp-serial-flasher/src/esp_targets.c", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/managed_components/espressif__esp-serial-flasher/src/md5_hash.c", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/managed_components/espressif__esp-serial-flasher/src/protocol.c", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/managed_components/espressif__esp-serial-flasher/src/slip.c", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/managed_components/espressif__esp-serial-flasher/port/esp32_port.c" ],
             "include_dirs": [ "include", "port" ]
         },
         "espressif__esp-zboss-lib": {
             "alias": "idf::espressif__esp-zboss-lib",
             "target": "___idf_espressif__esp-zboss-lib",
             "prefix": "idf",
-            "dir": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/managed_components/espressif__esp-zboss-lib",
+            "dir": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/managed_components/espressif__esp-zboss-lib",
             "type": "CONFIG_ONLY",
             "lib": "__idf_espressif__esp-zboss-lib",
             "reqs": [],
@@ -1097,7 +1097,7 @@
             "alias": "idf::espressif__esp-zigbee-lib",
             "target": "___idf_espressif__esp-zigbee-lib",
             "prefix": "idf",
-            "dir": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/managed_components/espressif__esp-zigbee-lib",
+            "dir": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/managed_components/espressif__esp-zigbee-lib",
             "type": "CONFIG_ONLY",
             "lib": "__idf_espressif__esp-zigbee-lib",
             "reqs": [ "driver", "vfs", "ieee802154", "openthread", "espressif__esp-zboss-lib" ],
@@ -1112,16 +1112,31 @@
             "alias": "idf::espressif__esp_rcp_update",
             "target": "___idf_espressif__esp_rcp_update",
             "prefix": "idf",
-            "dir": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/managed_components/espressif__esp_rcp_update",
+            "dir": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/managed_components/espressif__esp_rcp_update",
             "type": "LIBRARY",
             "lib": "__idf_espressif__esp_rcp_update",
             "reqs": [ "driver", "espressif__esp-serial-flasher", "nvs_flash" ],
             "priv_reqs": [],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/espressif__esp_rcp_update/libespressif__esp_rcp_update.a",
-            "sources": [ "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/managed_components/espressif__esp_rcp_update/src/esp_rcp_update.c" ],
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/espressif__esp_rcp_update/libespressif__esp_rcp_update.a",
+            "sources": [ "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/managed_components/espressif__esp_rcp_update/src/esp_rcp_update.c" ],
             "include_dirs": [ "include" ]
+        },
+        "espressif__led_strip": {
+            "alias": "idf::espressif__led_strip",
+            "target": "___idf_espressif__led_strip",
+            "prefix": "idf",
+            "dir": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/managed_components/espressif__led_strip",
+            "type": "LIBRARY",
+            "lib": "__idf_espressif__led_strip",
+            "reqs": [ "esp_driver_rmt", "esp_driver_spi" ],
+            "priv_reqs": [],
+            "managed_reqs": [],
+            "managed_priv_reqs": [],
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/espressif__led_strip/libespressif__led_strip.a",
+            "sources": [ "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/managed_components/espressif__led_strip/src/led_strip_api.c", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/managed_components/espressif__led_strip/src/led_strip_rmt_dev.c", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/managed_components/espressif__led_strip/src/led_strip_rmt_encoder.c", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/managed_components/espressif__led_strip/src/led_strip_spi_dev.c" ],
+            "include_dirs": [ "include", "interface" ]
         },
         "esptool_py": {
             "alias": "idf::esptool_py",
@@ -1149,7 +1164,7 @@
             "priv_reqs": [ "vfs", "esp_driver_gpio" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/fatfs/libfatfs.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/fatfs/libfatfs.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/fatfs/diskio/diskio.c", "C:/Users/procu/esp/v5.5/esp-idf/components/fatfs/diskio/diskio_rawflash.c", "C:/Users/procu/esp/v5.5/esp-idf/components/fatfs/diskio/diskio_wl.c", "C:/Users/procu/esp/v5.5/esp-idf/components/fatfs/src/ff.c", "C:/Users/procu/esp/v5.5/esp-idf/components/fatfs/src/ffunicode.c", "C:/Users/procu/esp/v5.5/esp-idf/components/fatfs/port/freertos/ffsystem.c", "C:/Users/procu/esp/v5.5/esp-idf/components/fatfs/diskio/diskio_sdmmc.c", "C:/Users/procu/esp/v5.5/esp-idf/components/fatfs/vfs/vfs_fat.c", "C:/Users/procu/esp/v5.5/esp-idf/components/fatfs/vfs/vfs_fat_sdmmc.c", "C:/Users/procu/esp/v5.5/esp-idf/components/fatfs/vfs/vfs_fat_spiflash.c" ],
             "include_dirs": [ "diskio", "src", "vfs" ]
         },
@@ -1164,7 +1179,7 @@
             "priv_reqs": [],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/freertos/libfreertos.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/freertos/libfreertos.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/freertos/heap_idf.c", "C:/Users/procu/esp/v5.5/esp-idf/components/freertos/app_startup.c", "C:/Users/procu/esp/v5.5/esp-idf/components/freertos/port_common.c", "C:/Users/procu/esp/v5.5/esp-idf/components/freertos/port_systick.c", "C:/Users/procu/esp/v5.5/esp-idf/components/freertos/FreeRTOS-Kernel/list.c", "C:/Users/procu/esp/v5.5/esp-idf/components/freertos/FreeRTOS-Kernel/queue.c", "C:/Users/procu/esp/v5.5/esp-idf/components/freertos/FreeRTOS-Kernel/tasks.c", "C:/Users/procu/esp/v5.5/esp-idf/components/freertos/FreeRTOS-Kernel/timers.c", "C:/Users/procu/esp/v5.5/esp-idf/components/freertos/FreeRTOS-Kernel/event_groups.c", "C:/Users/procu/esp/v5.5/esp-idf/components/freertos/FreeRTOS-Kernel/stream_buffer.c", "C:/Users/procu/esp/v5.5/esp-idf/components/freertos/FreeRTOS-Kernel/portable/riscv/port.c", "C:/Users/procu/esp/v5.5/esp-idf/components/freertos/FreeRTOS-Kernel/portable/riscv/portasm.S", "C:/Users/procu/esp/v5.5/esp-idf/components/freertos/esp_additions/freertos_compatibility.c", "C:/Users/procu/esp/v5.5/esp-idf/components/freertos/esp_additions/idf_additions_event_groups.c", "C:/Users/procu/esp/v5.5/esp-idf/components/freertos/esp_additions/idf_additions.c" ],
             "include_dirs": [ "config/include", "config/include/freertos", "config/riscv/include", "FreeRTOS-Kernel/include", "FreeRTOS-Kernel/portable/riscv/include", "FreeRTOS-Kernel/portable/riscv/include/freertos", "esp_additions/include" ]
         },
@@ -1179,7 +1194,7 @@
             "priv_reqs": [],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/hal/libhal.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/hal/libhal.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/hal/hal_utils.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/efuse_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/esp32h2/efuse_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/lp_timer_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/mmu_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/cache_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/color_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/spi_flash_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/spi_flash_hal_iram.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/spi_flash_encrypt_hal_iram.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/esp32h2/clk_tree_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/uart_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/uart_hal_iram.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/gpio_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/rtc_io_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/timer_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/ledc_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/ledc_hal_iram.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/i2c_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/i2c_hal_iram.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/rmt_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/pcnt_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/mcpwm_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/uhci_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/twai_hal_sja1000.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/gdma_hal_top.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/gdma_hal_ahb_v1.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/i2s_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/sdm_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/etm_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/parlio_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/adc_hal_common.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/adc_oneshot_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/adc_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/ecc_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/ecdsa_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/mpi_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/sha_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/aes_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/esp32h2/modem_clock_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/esp32h2/pau_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/brownout_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/vbat_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/spi_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/spi_hal_iram.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/spi_slave_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/spi_slave_hal_iram.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/spi_slave_hd_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/spi_flash_hal_gpspi.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/esp32h2/pmu_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/apm_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/hmac_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/ds_hal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/hal/usb_serial_jtag_hal.c" ],
             "include_dirs": [ "platform_port/include", "esp32h2/include", "include" ]
         },
@@ -1194,7 +1209,7 @@
             "priv_reqs": [ "soc" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/heap/libheap.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/heap/libheap.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/heap/heap_caps_base.c", "C:/Users/procu/esp/v5.5/esp-idf/components/heap/heap_caps.c", "C:/Users/procu/esp/v5.5/esp-idf/components/heap/heap_caps_init.c", "C:/Users/procu/esp/v5.5/esp-idf/components/heap/multi_heap.c", "C:/Users/procu/esp/v5.5/esp-idf/components/heap/port/memory_layout_utils.c", "C:/Users/procu/esp/v5.5/esp-idf/components/heap/port/esp32h2/memory_layout.c" ],
             "include_dirs": [ "include", "tlsf" ]
         },
@@ -1209,7 +1224,7 @@
             "priv_reqs": [],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/http_parser/libhttp_parser.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/http_parser/libhttp_parser.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/http_parser/http_parser.c" ],
             "include_dirs": [ "." ]
         },
@@ -1239,7 +1254,7 @@
             "priv_reqs": [ "esp_phy", "esp_timer", "soc", "hal", "esp_pm" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/ieee802154/libieee802154.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/ieee802154/libieee802154.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/ieee802154/esp_ieee802154.c", "C:/Users/procu/esp/v5.5/esp-idf/components/ieee802154/driver/esp_ieee802154_ack.c", "C:/Users/procu/esp/v5.5/esp-idf/components/ieee802154/driver/esp_ieee802154_dev.c", "C:/Users/procu/esp/v5.5/esp-idf/components/ieee802154/driver/esp_ieee802154_event.c", "C:/Users/procu/esp/v5.5/esp-idf/components/ieee802154/driver/esp_ieee802154_frame.c", "C:/Users/procu/esp/v5.5/esp-idf/components/ieee802154/driver/esp_ieee802154_pib.c", "C:/Users/procu/esp/v5.5/esp-idf/components/ieee802154/driver/esp_ieee802154_util.c", "C:/Users/procu/esp/v5.5/esp-idf/components/ieee802154/driver/esp_ieee802154_sec.c", "C:/Users/procu/esp/v5.5/esp-idf/components/ieee802154/driver/esp_ieee802154_timer.c" ],
             "include_dirs": [ "include" ]
         },
@@ -1254,7 +1269,7 @@
             "priv_reqs": [],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/json/libjson.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/json/libjson.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/json/cJSON/cJSON.c", "C:/Users/procu/esp/v5.5/esp-idf/components/json/cJSON/cJSON_Utils.c" ],
             "include_dirs": [ "cJSON" ]
         },
@@ -1269,7 +1284,7 @@
             "priv_reqs": [ "hal", "soc", "esp_hw_support" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/log/liblog.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/log/liblog.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/log/src/os/log_timestamp.c", "C:/Users/procu/esp/v5.5/esp-idf/components/log/src/log_timestamp_common.c", "C:/Users/procu/esp/v5.5/esp-idf/components/log/src/os/log_lock.c", "C:/Users/procu/esp/v5.5/esp-idf/components/log/src/buffer/log_buffers.c", "C:/Users/procu/esp/v5.5/esp-idf/components/log/src/os/util.c", "C:/Users/procu/esp/v5.5/esp-idf/components/log/src/util.c", "C:/Users/procu/esp/v5.5/esp-idf/components/log/src/log_format_text.c", "C:/Users/procu/esp/v5.5/esp-idf/components/log/src/log_print.c", "C:/Users/procu/esp/v5.5/esp-idf/components/log/src/log.c", "C:/Users/procu/esp/v5.5/esp-idf/components/log/src/os/log_write.c", "C:/Users/procu/esp/v5.5/esp-idf/components/log/src/log_level/log_level.c", "C:/Users/procu/esp/v5.5/esp-idf/components/log/src/log_level/tag_log_level/tag_log_level.c", "C:/Users/procu/esp/v5.5/esp-idf/components/log/src/log_level/tag_log_level/linked_list/log_linked_list.c", "C:/Users/procu/esp/v5.5/esp-idf/components/log/src/log_level/tag_log_level/cache/log_binary_heap.c" ],
             "include_dirs": [ "include" ]
         },
@@ -1284,7 +1299,7 @@
             "priv_reqs": [ "vfs" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/lwip/liblwip.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/lwip/liblwip.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/apps/sntp/sntp.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/api/api_lib.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/api/api_msg.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/api/err.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/api/if_api.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/api/netbuf.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/api/netdb.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/api/netifapi.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/api/sockets.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/api/tcpip.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/apps/sntp/sntp.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/apps/netbiosns/netbiosns.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/core/def.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/core/dns.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/core/inet_chksum.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/core/init.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/core/ip.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/core/mem.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/core/memp.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/core/netif.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/core/pbuf.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/core/raw.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/core/stats.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/core/sys.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/core/tcp.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/core/tcp_in.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/core/tcp_out.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/core/timeouts.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/core/udp.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/core/ipv4/autoip.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/core/ipv4/dhcp.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/core/ipv4/etharp.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/core/ipv4/icmp.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/core/ipv4/igmp.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/core/ipv4/ip4.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/core/ipv4/ip4_napt.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/core/ipv4/ip4_addr.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/core/ipv4/ip4_frag.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/core/ipv6/dhcp6.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/core/ipv6/ethip6.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/core/ipv6/icmp6.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/core/ipv6/inet6.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/core/ipv6/ip6.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/core/ipv6/ip6_addr.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/core/ipv6/ip6_frag.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/core/ipv6/mld6.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/core/ipv6/nd6.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/netif/ethernet.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/netif/bridgeif.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/netif/bridgeif_fdb.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/netif/slipif.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/netif/ppp/auth.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/netif/ppp/ccp.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/netif/ppp/chap-md5.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/netif/ppp/chap-new.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/netif/ppp/chap_ms.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/netif/ppp/demand.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/netif/ppp/eap.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/netif/ppp/ecp.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/netif/ppp/eui64.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/netif/ppp/fsm.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/netif/ppp/ipcp.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/netif/ppp/ipv6cp.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/netif/ppp/lcp.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/netif/ppp/magic.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/netif/ppp/mppe.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/netif/ppp/multilink.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/netif/ppp/ppp.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/netif/ppp/pppapi.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/netif/ppp/pppcrypt.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/netif/ppp/pppoe.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/netif/ppp/pppol2tp.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/netif/ppp/pppos.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/netif/ppp/upap.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/netif/ppp/utils.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/netif/ppp/vj.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/port/hooks/tcp_isn_default.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/port/hooks/lwip_default_hooks.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/port/debug/lwip_debug.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/port/sockets_ext.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/port/freertos/sys_arch.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/port/if_index.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/port/acd_dhcp_check.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/port/esp32xx/vfs_lwip.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/apps/ping/esp_ping.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/apps/ping/ping.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/apps/ping/ping_sock.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/netif/ppp/polarssl/arc4.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/netif/ppp/polarssl/des.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/netif/ppp/polarssl/md4.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/netif/ppp/polarssl/md5.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/lwip/src/netif/ppp/polarssl/sha1.c", "C:/Users/procu/esp/v5.5/esp-idf/components/lwip/apps/dhcpserver/dhcpserver.c" ],
             "include_dirs": [ "include", "include/apps", "include/apps/sntp", "lwip/src/include", "port/include", "port/freertos/include/", "port/esp32xx/include", "port/esp32xx/include/arch", "port/esp32xx/include/sys" ]
         },
@@ -1292,15 +1307,15 @@
             "alias": "idf::main",
             "target": "___idf_main",
             "prefix": "idf",
-            "dir": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/main",
+            "dir": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/main",
             "type": "LIBRARY",
             "lib": "__idf_main",
-            "reqs": [],
-            "priv_reqs": [ "espressif__esp-serial-flasher", "espressif__esp-zboss-lib", "espressif__esp-zigbee-lib", "espressif__esp_rcp_update" ],
+            "reqs": [ "json", "mbedtls", "esp_timer", "driver", "nvs_flash" ],
+            "priv_reqs": [ "espressif__esp-serial-flasher", "espressif__esp-zboss-lib", "espressif__esp-zigbee-lib", "espressif__esp_rcp_update", "espressif__led_strip" ],
             "managed_reqs": [],
-            "managed_priv_reqs": [ "espressif__esp-serial-flasher", "espressif__esp-zboss-lib", "espressif__esp-zigbee-lib", "espressif__esp_rcp_update" ],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/main/libmain.a",
-            "sources": [ "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/main/nuos_zigbee_scene_commands.c", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/main/nuos_zigbee_group_commands.c", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/main/esp_zigbee_gateway.c", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/main/nuos_nvs.c", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/main/http_server.c", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/main/switch_driver.c", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/main/zigbee_2_uart.cpp", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/main/frame_enc_dec.cpp", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/main/XBee.cpp" ],
+            "managed_priv_reqs": [ "espressif__esp-serial-flasher", "espressif__esp-zboss-lib", "espressif__esp-zigbee-lib", "espressif__esp_rcp_update", "espressif__led_strip" ],
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/main/libmain.a",
+            "sources": [ "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/main/esp_zigbee_gateway.c", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/main/zigbee_uart_process.c", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/main/nuos_uart_protocol.c", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/main/nuos_nvs.c", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/main/switch_driver.c", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/main/nuos_scene_engine.c", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/main/zigbee_device_classifier.c" ],
             "include_dirs": [ "." ]
         },
         "mbedtls": {
@@ -1314,8 +1329,8 @@
             "priv_reqs": [ "soc", "esp_hw_support", "esp_pm" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/mbedtls/libmbedtls.a",
-            "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/mbedtls/esp_crt_bundle/esp_crt_bundle.c", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/x509_crt_bundle.S" ],
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/mbedtls/libmbedtls.a",
+            "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/mbedtls/esp_crt_bundle/esp_crt_bundle.c", "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/x509_crt_bundle.S" ],
             "include_dirs": [ "port/include", "mbedtls/include", "mbedtls/library", "esp_crt_bundle/include" ]
         },
         "mqtt": {
@@ -1329,7 +1344,7 @@
             "priv_reqs": [ "esp_timer", "http_parser", "esp_hw_support", "heap" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/mqtt/libmqtt.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/mqtt/libmqtt.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/mqtt/esp-mqtt/mqtt_client.c", "C:/Users/procu/esp/v5.5/esp-idf/components/mqtt/esp-mqtt/lib/mqtt_msg.c", "C:/Users/procu/esp/v5.5/esp-idf/components/mqtt/esp-mqtt/lib/mqtt_outbox.c", "C:/Users/procu/esp/v5.5/esp-idf/components/mqtt/esp-mqtt/lib/platform_esp32_idf.c" ],
             "include_dirs": [ "C:/Users/procu/esp/v5.5/esp-idf/components/mqtt/esp-mqtt/include" ]
         },
@@ -1344,7 +1359,7 @@
             "priv_reqs": [ "soc", "spi_flash" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/newlib/libnewlib.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/newlib/libnewlib.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/newlib/src/init.c", "C:/Users/procu/esp/v5.5/esp-idf/components/newlib/src/abort.c", "C:/Users/procu/esp/v5.5/esp-idf/components/newlib/src/assert.c", "C:/Users/procu/esp/v5.5/esp-idf/components/newlib/src/heap.c", "C:/Users/procu/esp/v5.5/esp-idf/components/newlib/src/locks.c", "C:/Users/procu/esp/v5.5/esp-idf/components/newlib/src/poll.c", "C:/Users/procu/esp/v5.5/esp-idf/components/newlib/src/pthread.c", "C:/Users/procu/esp/v5.5/esp-idf/components/newlib/src/random.c", "C:/Users/procu/esp/v5.5/esp-idf/components/newlib/src/getentropy.c", "C:/Users/procu/esp/v5.5/esp-idf/components/newlib/src/termios.c", "C:/Users/procu/esp/v5.5/esp-idf/components/newlib/src/stdatomic.c", "C:/Users/procu/esp/v5.5/esp-idf/components/newlib/src/time.c", "C:/Users/procu/esp/v5.5/esp-idf/components/newlib/src/sysconf.c", "C:/Users/procu/esp/v5.5/esp-idf/components/newlib/src/realpath.c", "C:/Users/procu/esp/v5.5/esp-idf/components/newlib/src/scandir.c", "C:/Users/procu/esp/v5.5/esp-idf/components/newlib/src/syscalls.c", "C:/Users/procu/esp/v5.5/esp-idf/components/newlib/src/reent_syscalls.c", "C:/Users/procu/esp/v5.5/esp-idf/components/newlib/src/port/esp_time_impl.c", "C:/Users/procu/esp/v5.5/esp-idf/components/newlib/src/flockfile.c", "C:/Users/procu/esp/v5.5/esp-idf/components/newlib/src/reent_init.c", "C:/Users/procu/esp/v5.5/esp-idf/components/newlib/src/newlib_init.c", "C:/Users/procu/esp/v5.5/esp-idf/components/newlib/src/port/esp_time_impl.c" ],
             "include_dirs": [ "platform_include" ]
         },
@@ -1359,7 +1374,7 @@
             "priv_reqs": [ "spi_flash", "newlib" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/nvs_flash/libnvs_flash.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/nvs_flash/libnvs_flash.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/nvs_flash/src/nvs_api.cpp", "C:/Users/procu/esp/v5.5/esp-idf/components/nvs_flash/src/nvs_cxx_api.cpp", "C:/Users/procu/esp/v5.5/esp-idf/components/nvs_flash/src/nvs_item_hash_list.cpp", "C:/Users/procu/esp/v5.5/esp-idf/components/nvs_flash/src/nvs_page.cpp", "C:/Users/procu/esp/v5.5/esp-idf/components/nvs_flash/src/nvs_pagemanager.cpp", "C:/Users/procu/esp/v5.5/esp-idf/components/nvs_flash/src/nvs_storage.cpp", "C:/Users/procu/esp/v5.5/esp-idf/components/nvs_flash/src/nvs_handle_simple.cpp", "C:/Users/procu/esp/v5.5/esp-idf/components/nvs_flash/src/nvs_handle_locked.cpp", "C:/Users/procu/esp/v5.5/esp-idf/components/nvs_flash/src/nvs_partition.cpp", "C:/Users/procu/esp/v5.5/esp-idf/components/nvs_flash/src/nvs_partition_lookup.cpp", "C:/Users/procu/esp/v5.5/esp-idf/components/nvs_flash/src/nvs_partition_manager.cpp", "C:/Users/procu/esp/v5.5/esp-idf/components/nvs_flash/src/nvs_types.cpp", "C:/Users/procu/esp/v5.5/esp-idf/components/nvs_flash/src/nvs_platform.cpp", "C:/Users/procu/esp/v5.5/esp-idf/components/nvs_flash/src/nvs_bootloader.c", "C:/Users/procu/esp/v5.5/esp-idf/components/nvs_flash/src/nvs_encrypted_partition.cpp", "C:/Users/procu/esp/v5.5/esp-idf/components/nvs_flash/src/nvs_bootloader_aes.c", "C:/Users/procu/esp/v5.5/esp-idf/components/nvs_flash/src/nvs_bootloader_xts_aes.c" ],
             "include_dirs": [ "include" ]
         },
@@ -1374,7 +1389,7 @@
             "priv_reqs": [ "bootloader_support", "efuse", "esp_partition", "nvs_flash" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/nvs_sec_provider/libnvs_sec_provider.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/nvs_sec_provider/libnvs_sec_provider.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/nvs_sec_provider/nvs_sec_provider.c" ],
             "include_dirs": [ "include" ]
         },
@@ -1419,7 +1434,7 @@
             "priv_reqs": [],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/protobuf-c/libprotobuf-c.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/protobuf-c/libprotobuf-c.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/protobuf-c/protobuf-c/protobuf-c/protobuf-c.c" ],
             "include_dirs": [ "protobuf-c" ]
         },
@@ -1434,7 +1449,7 @@
             "priv_reqs": [ "esp_netif", "esp_driver_gpio", "esp_driver_uart", "esp_wifi", "vfs", "console", "esp_eth", "openthread" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/protocol_examples_common/libprotocol_examples_common.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/protocol_examples_common/libprotocol_examples_common.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/examples/common_components/protocol_examples_common/stdin_out.c", "C:/Users/procu/esp/v5.5/esp-idf/examples/common_components/protocol_examples_common/addr_from_stdin.c", "C:/Users/procu/esp/v5.5/esp-idf/examples/common_components/protocol_examples_common/connect.c", "C:/Users/procu/esp/v5.5/esp-idf/examples/common_components/protocol_examples_common/wifi_connect.c", "C:/Users/procu/esp/v5.5/esp-idf/examples/common_components/protocol_examples_common/protocol_examples_utils.c", "C:/Users/procu/esp/v5.5/esp-idf/examples/common_components/protocol_examples_common/eth_connect.c" ],
             "include_dirs": [ "include" ]
         },
@@ -1449,7 +1464,7 @@
             "priv_reqs": [ "protobuf-c", "mbedtls", "console", "esp_http_server", "esp_driver_uart" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/protocomm/libprotocomm.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/protocomm/libprotocomm.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/protocomm/src/common/protocomm.c", "C:/Users/procu/esp/v5.5/esp-idf/components/protocomm/proto-c/constants.pb-c.c", "C:/Users/procu/esp/v5.5/esp-idf/components/protocomm/proto-c/sec0.pb-c.c", "C:/Users/procu/esp/v5.5/esp-idf/components/protocomm/proto-c/sec1.pb-c.c", "C:/Users/procu/esp/v5.5/esp-idf/components/protocomm/proto-c/sec2.pb-c.c", "C:/Users/procu/esp/v5.5/esp-idf/components/protocomm/proto-c/session.pb-c.c", "C:/Users/procu/esp/v5.5/esp-idf/components/protocomm/src/transports/protocomm_console.c", "C:/Users/procu/esp/v5.5/esp-idf/components/protocomm/src/transports/protocomm_httpd.c", "C:/Users/procu/esp/v5.5/esp-idf/components/protocomm/src/security/security0.c", "C:/Users/procu/esp/v5.5/esp-idf/components/protocomm/src/security/security1.c", "C:/Users/procu/esp/v5.5/esp-idf/components/protocomm/src/security/security2.c", "C:/Users/procu/esp/v5.5/esp-idf/components/protocomm/src/crypto/srp6a/esp_srp.c", "C:/Users/procu/esp/v5.5/esp-idf/components/protocomm/src/crypto/srp6a/esp_srp_mpi.c" ],
             "include_dirs": [ "include/common", "include/security", "include/transports", "include/crypto/srp6a", "proto-c" ]
         },
@@ -1464,7 +1479,7 @@
             "priv_reqs": [],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/pthread/libpthread.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/pthread/libpthread.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/pthread/pthread.c", "C:/Users/procu/esp/v5.5/esp-idf/components/pthread/pthread_cond_var.c", "C:/Users/procu/esp/v5.5/esp-idf/components/pthread/pthread_local_storage.c", "C:/Users/procu/esp/v5.5/esp-idf/components/pthread/pthread_rwlock.c", "C:/Users/procu/esp/v5.5/esp-idf/components/pthread/pthread_semaphore.c" ],
             "include_dirs": [ "include" ]
         },
@@ -1479,7 +1494,7 @@
             "priv_reqs": [ "soc", "hal" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/riscv/libriscv.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/riscv/libriscv.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/riscv/instruction_decode.c", "C:/Users/procu/esp/v5.5/esp-idf/components/riscv/interrupt.c", "C:/Users/procu/esp/v5.5/esp-idf/components/riscv/rv_utils.c", "C:/Users/procu/esp/v5.5/esp-idf/components/riscv/vectors.S", "C:/Users/procu/esp/v5.5/esp-idf/components/riscv/interrupt_plic.c", "C:/Users/procu/esp/v5.5/esp-idf/components/riscv/vectors_intc.S" ],
             "include_dirs": [ "include" ]
         },
@@ -1494,7 +1509,7 @@
             "priv_reqs": [],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/rt/librt.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/rt/librt.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/rt/FreeRTOS_POSIX_mqueue.c", "C:/Users/procu/esp/v5.5/esp-idf/components/rt/FreeRTOS_POSIX_utils.c" ],
             "include_dirs": [ "include" ]
         },
@@ -1509,7 +1524,7 @@
             "priv_reqs": [ "soc", "esp_timer", "esp_mm" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/sdmmc/libsdmmc.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/sdmmc/libsdmmc.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/sdmmc/sdmmc_cmd.c", "C:/Users/procu/esp/v5.5/esp-idf/components/sdmmc/sdmmc_common.c", "C:/Users/procu/esp/v5.5/esp-idf/components/sdmmc/sdmmc_init.c", "C:/Users/procu/esp/v5.5/esp-idf/components/sdmmc/sdmmc_io.c", "C:/Users/procu/esp/v5.5/esp-idf/components/sdmmc/sdmmc_mmc.c", "C:/Users/procu/esp/v5.5/esp-idf/components/sdmmc/sdmmc_sd.c", "C:/Users/procu/esp/v5.5/esp-idf/components/sdmmc/sd_pwr_ctrl/sd_pwr_ctrl.c" ],
             "include_dirs": [ "include" ]
         },
@@ -1524,7 +1539,7 @@
             "priv_reqs": [],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/soc/libsoc.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/soc/libsoc.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/soc/lldesc.c", "C:/Users/procu/esp/v5.5/esp-idf/components/soc/dport_access_common.c", "C:/Users/procu/esp/v5.5/esp-idf/components/soc/esp32h2/interrupts.c", "C:/Users/procu/esp/v5.5/esp-idf/components/soc/esp32h2/gpio_periph.c", "C:/Users/procu/esp/v5.5/esp-idf/components/soc/esp32h2/uart_periph.c", "C:/Users/procu/esp/v5.5/esp-idf/components/soc/esp32h2/adc_periph.c", "C:/Users/procu/esp/v5.5/esp-idf/components/soc/esp32h2/ana_cmpr_periph.c", "C:/Users/procu/esp/v5.5/esp-idf/components/soc/esp32h2/dedic_gpio_periph.c", "C:/Users/procu/esp/v5.5/esp-idf/components/soc/esp32h2/etm_periph.c", "C:/Users/procu/esp/v5.5/esp-idf/components/soc/esp32h2/gdma_periph.c", "C:/Users/procu/esp/v5.5/esp-idf/components/soc/esp32h2/spi_periph.c", "C:/Users/procu/esp/v5.5/esp-idf/components/soc/esp32h2/ledc_periph.c", "C:/Users/procu/esp/v5.5/esp-idf/components/soc/esp32h2/pcnt_periph.c", "C:/Users/procu/esp/v5.5/esp-idf/components/soc/esp32h2/rmt_periph.c", "C:/Users/procu/esp/v5.5/esp-idf/components/soc/esp32h2/sdm_periph.c", "C:/Users/procu/esp/v5.5/esp-idf/components/soc/esp32h2/i2s_periph.c", "C:/Users/procu/esp/v5.5/esp-idf/components/soc/esp32h2/i2c_periph.c", "C:/Users/procu/esp/v5.5/esp-idf/components/soc/esp32h2/temperature_sensor_periph.c", "C:/Users/procu/esp/v5.5/esp-idf/components/soc/esp32h2/timer_periph.c", "C:/Users/procu/esp/v5.5/esp-idf/components/soc/esp32h2/parlio_periph.c", "C:/Users/procu/esp/v5.5/esp-idf/components/soc/esp32h2/mcpwm_periph.c", "C:/Users/procu/esp/v5.5/esp-idf/components/soc/esp32h2/mpi_periph.c", "C:/Users/procu/esp/v5.5/esp-idf/components/soc/esp32h2/twai_periph.c", "C:/Users/procu/esp/v5.5/esp-idf/components/soc/esp32h2/wdt_periph.c", "C:/Users/procu/esp/v5.5/esp-idf/components/soc/esp32h2/ieee802154_periph.c", "C:/Users/procu/esp/v5.5/esp-idf/components/soc/esp32h2/rtc_io_periph.c", "C:/Users/procu/esp/v5.5/esp-idf/components/soc/esp32h2/system_retention_periph.c", "C:/Users/procu/esp/v5.5/esp-idf/components/soc/esp32h2/power_supply_periph.c" ],
             "include_dirs": [ "include", "esp32h2", "esp32h2/include", "esp32h2/register" ]
         },
@@ -1539,7 +1554,7 @@
             "priv_reqs": [ "bootloader_support", "app_update", "soc", "esp_mm", "esp_driver_gpio" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/spi_flash/libspi_flash.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/spi_flash/libspi_flash.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/spi_flash/flash_brownout_hook.c", "C:/Users/procu/esp/v5.5/esp-idf/components/spi_flash/spi_flash_chip_drivers.c", "C:/Users/procu/esp/v5.5/esp-idf/components/spi_flash/spi_flash_chip_generic.c", "C:/Users/procu/esp/v5.5/esp-idf/components/spi_flash/spi_flash_chip_issi.c", "C:/Users/procu/esp/v5.5/esp-idf/components/spi_flash/spi_flash_chip_mxic.c", "C:/Users/procu/esp/v5.5/esp-idf/components/spi_flash/spi_flash_chip_gd.c", "C:/Users/procu/esp/v5.5/esp-idf/components/spi_flash/spi_flash_chip_winbond.c", "C:/Users/procu/esp/v5.5/esp-idf/components/spi_flash/spi_flash_chip_boya.c", "C:/Users/procu/esp/v5.5/esp-idf/components/spi_flash/spi_flash_chip_mxic_opi.c", "C:/Users/procu/esp/v5.5/esp-idf/components/spi_flash/spi_flash_chip_th.c", "C:/Users/procu/esp/v5.5/esp-idf/components/spi_flash/memspi_host_driver.c", "C:/Users/procu/esp/v5.5/esp-idf/components/spi_flash/cache_utils.c", "C:/Users/procu/esp/v5.5/esp-idf/components/spi_flash/flash_mmap.c", "C:/Users/procu/esp/v5.5/esp-idf/components/spi_flash/flash_ops.c", "C:/Users/procu/esp/v5.5/esp-idf/components/spi_flash/spi_flash_wrap.c", "C:/Users/procu/esp/v5.5/esp-idf/components/spi_flash/esp_flash_api.c", "C:/Users/procu/esp/v5.5/esp-idf/components/spi_flash/esp_flash_spi_init.c", "C:/Users/procu/esp/v5.5/esp-idf/components/spi_flash/spi_flash_os_func_app.c", "C:/Users/procu/esp/v5.5/esp-idf/components/spi_flash/spi_flash_os_func_noos.c" ],
             "include_dirs": [ "include" ]
         },
@@ -1554,7 +1569,7 @@
             "priv_reqs": [ "bootloader_support", "esptool_py", "vfs" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/spiffs/libspiffs.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/spiffs/libspiffs.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/spiffs/spiffs_api.c", "C:/Users/procu/esp/v5.5/esp-idf/components/spiffs/spiffs/src/spiffs_cache.c", "C:/Users/procu/esp/v5.5/esp-idf/components/spiffs/spiffs/src/spiffs_check.c", "C:/Users/procu/esp/v5.5/esp-idf/components/spiffs/spiffs/src/spiffs_gc.c", "C:/Users/procu/esp/v5.5/esp-idf/components/spiffs/spiffs/src/spiffs_hydrogen.c", "C:/Users/procu/esp/v5.5/esp-idf/components/spiffs/spiffs/src/spiffs_nucleus.c", "C:/Users/procu/esp/v5.5/esp-idf/components/spiffs/esp_spiffs.c" ],
             "include_dirs": [ "include" ]
         },
@@ -1569,7 +1584,7 @@
             "priv_reqs": [],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/tcp_transport/libtcp_transport.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/tcp_transport/libtcp_transport.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/tcp_transport/transport.c", "C:/Users/procu/esp/v5.5/esp-idf/components/tcp_transport/transport_ssl.c", "C:/Users/procu/esp/v5.5/esp-idf/components/tcp_transport/transport_internal.c", "C:/Users/procu/esp/v5.5/esp-idf/components/tcp_transport/transport_socks_proxy.c", "C:/Users/procu/esp/v5.5/esp-idf/components/tcp_transport/transport_ws.c" ],
             "include_dirs": [ "include" ]
         },
@@ -1599,7 +1614,7 @@
             "priv_reqs": [],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/unity/libunity.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/unity/libunity.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/unity/unity/src/unity.c", "C:/Users/procu/esp/v5.5/esp-idf/components/unity/unity_compat.c", "C:/Users/procu/esp/v5.5/esp-idf/components/unity/unity_runner.c", "C:/Users/procu/esp/v5.5/esp-idf/components/unity/unity_utils_freertos.c", "C:/Users/procu/esp/v5.5/esp-idf/components/unity/unity_utils_cache.c", "C:/Users/procu/esp/v5.5/esp-idf/components/unity/unity_utils_memory.c", "C:/Users/procu/esp/v5.5/esp-idf/components/unity/unity_port_esp32.c", "C:/Users/procu/esp/v5.5/esp-idf/components/unity/port/esp/unity_utils_memory_esp.c" ],
             "include_dirs": [ "include", "unity/src" ]
         },
@@ -1629,7 +1644,7 @@
             "priv_reqs": [ "esp_timer", "esp_driver_uart", "esp_driver_usb_serial_jtag", "esp_vfs_console" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/vfs/libvfs.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/vfs/libvfs.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/vfs/vfs.c", "C:/Users/procu/esp/v5.5/esp-idf/components/vfs/vfs_eventfd.c", "C:/Users/procu/esp/v5.5/esp-idf/components/vfs/vfs_semihost.c", "C:/Users/procu/esp/v5.5/esp-idf/components/vfs/nullfs.c" ],
             "include_dirs": [ "include" ]
         },
@@ -1644,7 +1659,7 @@
             "priv_reqs": [ "spi_flash" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/esp-idf/wear_levelling/libwear_levelling.a",
+            "file": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/esp-idf/wear_levelling/libwear_levelling.a",
             "sources": [ "C:/Users/procu/esp/v5.5/esp-idf/components/wear_levelling/Partition.cpp", "C:/Users/procu/esp/v5.5/esp-idf/components/wear_levelling/SPI_Flash.cpp", "C:/Users/procu/esp/v5.5/esp-idf/components/wear_levelling/WL_Ext_Perf.cpp", "C:/Users/procu/esp/v5.5/esp-idf/components/wear_levelling/WL_Ext_Safe.cpp", "C:/Users/procu/esp/v5.5/esp-idf/components/wear_levelling/WL_Flash.cpp", "C:/Users/procu/esp/v5.5/esp-idf/components/wear_levelling/crc32.cpp", "C:/Users/procu/esp/v5.5/esp-idf/components/wear_levelling/wear_levelling.cpp" ],
             "include_dirs": [ "include" ]
         },
@@ -2980,12 +2995,12 @@
             "alias": "idf::main",
             "target": "___idf_main",
             "prefix": "idf",
-            "dir": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/main",
+            "dir": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/main",
             "lib": "__idf_main",
-            "reqs": [],
-            "priv_reqs": [ "espressif__esp-serial-flasher", "espressif__esp-zboss-lib", "espressif__esp-zigbee-lib", "espressif__esp_rcp_update" ],
+            "reqs": [ "json", "mbedtls", "esp_timer", "driver", "nvs_flash" ],
+            "priv_reqs": [ "espressif__esp-serial-flasher", "espressif__esp-zboss-lib", "espressif__esp-zigbee-lib", "espressif__esp_rcp_update", "espressif__led_strip" ],
             "managed_reqs": [],
-            "managed_priv_reqs": [ "espressif__esp-serial-flasher", "espressif__esp-zboss-lib", "espressif__esp-zigbee-lib", "espressif__esp_rcp_update" ],
+            "managed_priv_reqs": [ "espressif__esp-serial-flasher", "espressif__esp-zboss-lib", "espressif__esp-zigbee-lib", "espressif__esp_rcp_update", "espressif__led_strip" ],
             "include_dirs": [ "." ]
         },
         "protocol_examples_common": {
@@ -3004,7 +3019,7 @@
             "alias": "idf::espressif__esp-serial-flasher",
             "target": "___idf_espressif__esp-serial-flasher",
             "prefix": "idf",
-            "dir": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/managed_components/espressif__esp-serial-flasher",
+            "dir": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/managed_components/espressif__esp-serial-flasher",
             "lib": "__idf_espressif__esp-serial-flasher",
             "reqs": [],
             "priv_reqs": [ "driver", "esp_timer" ],
@@ -3016,7 +3031,7 @@
             "alias": "idf::espressif__esp-zboss-lib",
             "target": "___idf_espressif__esp-zboss-lib",
             "prefix": "idf",
-            "dir": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/managed_components/espressif__esp-zboss-lib",
+            "dir": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/managed_components/espressif__esp-zboss-lib",
             "lib": "__idf_espressif__esp-zboss-lib",
             "reqs": [],
             "priv_reqs": [],
@@ -3028,7 +3043,7 @@
             "alias": "idf::espressif__esp-zigbee-lib",
             "target": "___idf_espressif__esp-zigbee-lib",
             "prefix": "idf",
-            "dir": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/managed_components/espressif__esp-zigbee-lib",
+            "dir": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/managed_components/espressif__esp-zigbee-lib",
             "lib": "__idf_espressif__esp-zigbee-lib",
             "reqs": [ "driver", "vfs", "ieee802154", "openthread", "espressif__esp-zboss-lib" ],
             "priv_reqs": [],
@@ -3040,21 +3055,33 @@
             "alias": "idf::espressif__esp_rcp_update",
             "target": "___idf_espressif__esp_rcp_update",
             "prefix": "idf",
-            "dir": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/managed_components/espressif__esp_rcp_update",
+            "dir": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/managed_components/espressif__esp_rcp_update",
             "lib": "__idf_espressif__esp_rcp_update",
             "reqs": [ "driver", "espressif__esp-serial-flasher", "nvs_flash" ],
             "priv_reqs": [],
             "managed_reqs": [],
             "managed_priv_reqs": [],
             "include_dirs": [ "include" ]
+        },
+        "espressif__led_strip": {
+            "alias": "idf::espressif__led_strip",
+            "target": "___idf_espressif__led_strip",
+            "prefix": "idf",
+            "dir": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/managed_components/espressif__led_strip",
+            "lib": "__idf_espressif__led_strip",
+            "reqs": [ "esp_driver_rmt", "esp_driver_spi" ],
+            "priv_reqs": [],
+            "managed_reqs": [],
+            "managed_priv_reqs": [],
+            "include_dirs": [ "include", "interface" ]
         }
     },
     "debug_prefix_map_gdbinit": "",
     "gdbinit_files": {
-        "01_symbols": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/gdbinit/symbols",
-        "02_prefix_map": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/gdbinit/prefix_map",
-        "03_py_extensions": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/gdbinit/py_extensions",
-        "04_connect": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/gdbinit/connect"
+        "01_symbols": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/gdbinit/symbols",
+        "02_prefix_map": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/gdbinit/prefix_map",
+        "03_py_extensions": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/gdbinit/py_extensions",
+        "04_connect": "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/gdbinit/connect"
     },
     "debug_arguments_openocd": "-f board/esp32h2-builtin.cfg"
 }

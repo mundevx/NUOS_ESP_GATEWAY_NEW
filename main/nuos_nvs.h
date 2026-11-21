@@ -30,7 +30,6 @@ extern "C" {
     // esp_err_t nvs_read_scene_array(void *scene_handle);
     // esp_err_t nvs_read_scene_by_id(uint16_t group_id, uint8_t scene_id, void *scene);
     // esp_err_t nvs_delete_scene(uint16_t group_id, uint8_t scene_id);
-
     esp_err_t nvs_get_last_ids(uint16_t *group_id, uint8_t *scene_id);
     esp_err_t nvs_set_last_ids(uint16_t group_id, uint8_t scene_id);
 

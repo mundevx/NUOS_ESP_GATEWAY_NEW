@@ -1,4 +1,4 @@
-# Install script for directory: C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/main
+# Install script for directory: C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/main
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

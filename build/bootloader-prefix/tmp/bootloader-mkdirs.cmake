@@ -10,18 +10,18 @@ if(NOT EXISTS "C:/Users/procu/esp/v5.5/esp-idf/components/bootloader/subproject"
   file(MAKE_DIRECTORY "C:/Users/procu/esp/v5.5/esp-idf/components/bootloader/subproject")
 endif()
 file(MAKE_DIRECTORY
-  "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/bootloader"
-  "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/bootloader-prefix"
-  "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/bootloader-prefix/tmp"
-  "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/bootloader-prefix/src/bootloader-stamp"
-  "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/bootloader-prefix/src"
-  "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/bootloader-prefix/src/bootloader-stamp"
+  "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/bootloader"
+  "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/bootloader-prefix"
+  "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/bootloader-prefix/tmp"
+  "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/bootloader-prefix/src/bootloader-stamp"
+  "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/bootloader-prefix/src"
+  "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/bootloader-prefix/src/bootloader-stamp"
 )
 
 set(configSubDirs )
 foreach(subDir IN LISTS configSubDirs)
-    file(MAKE_DIRECTORY "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/bootloader-prefix/src/bootloader-stamp/${subDir}")
+    file(MAKE_DIRECTORY "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/bootloader-prefix/src/bootloader-stamp/${subDir}")
 endforeach()
 if(cfgdir)
-  file(MAKE_DIRECTORY "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway/build/bootloader-prefix/src/bootloader-stamp${cfgdir}") # cfgdir has leading slash
+  file(MAKE_DIRECTORY "C:/esp/esp-zigbee-sdk/examples/esp_zigbee_HA_sample/esp_zigbee_gateway_new/build/bootloader-prefix/src/bootloader-stamp${cfgdir}") # cfgdir has leading slash
 endif()
